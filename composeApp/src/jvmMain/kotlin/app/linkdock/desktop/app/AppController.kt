@@ -16,6 +16,8 @@ import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
 import app.linkdock.desktop.storage.AppSettings
 import app.linkdock.desktop.storage.AppSettingsStore
+import app.linkdock.desktop.install.InstallationOutcome
+import app.linkdock.desktop.install.InstallationResult
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineScope
@@ -69,10 +71,6 @@ class AppController {
 
     private fun isEnvironmentVerified(state: AppUiState = _uiState.value): Boolean {
         return state.environmentSource == EnvironmentSource.VERIFIED
-    }
-
-    private fun hasVerifiedStreamlink(state: AppUiState = _uiState.value): Boolean {
-        return isEnvironmentVerified(state) && state.hasStreamlink
     }
 
     private fun removeHangul(value: String): String {
@@ -323,22 +321,9 @@ class AppController {
             return
         }
 
-        val verifiedHasStreamlink = hasVerifiedStreamlink(state)
-
-        val installActionLabel = when {
-            verifiedHasStreamlink -> "업데이트"
-            isEnvironmentVerified(state) -> "설치"
-            else -> "설치/업데이트"
-        }
-
-        val installState = state.copy(
-            hasStreamlink = verifiedHasStreamlink
-        )
-
         scope.launch {
-            startNewLogSession("Streamlink $installActionLabel 시작")
-
-            setStatus("Streamlink $installActionLabel 준비 중...")
+            startNewLogSession("Streamlink 설치/업데이트 시작")
+            setStatus("Streamlink 설치/업데이트 준비 중...")
 
             _uiState.update { current ->
                 current.copy(
@@ -347,9 +332,12 @@ class AppController {
                 )
             }
 
+            var streamlinkResult: InstallationResult?
+            var shouldRunPostInstallCheck: Boolean
+
             try {
-                val streamlinkResult = streamlinkInstaller.installOrUpdate(
-                    state = installState,
+                streamlinkResult = streamlinkInstaller.installOrUpdate(
+                    state = state,
                     onLine = { line ->
                         appendLog(line)
                     },
@@ -358,12 +346,16 @@ class AppController {
                     }
                 )
 
-                appendLog(streamlinkResult.completionMessage)
+                val currentResult = streamlinkResult
 
-                if (!streamlinkResult.success) {
-                    setStatus(streamlinkResult.completionMessage)
+                appendLog(currentResult.completionMessage)
+
+                if (!currentResult.success) {
+                    setStatus(currentResult.completionMessage)
                     return@launch
                 }
+
+                shouldRunPostInstallCheck = currentResult.didChangeStreamlink
 
                 setInstallProgressText(null)
                 setStatus("플러그인 설치/업데이트 중...")
@@ -383,7 +375,24 @@ class AppController {
                     return@launch
                 }
 
-                appendLog("설치 / 업데이트 완료")
+                val finalStatus = when (currentResult.outcome) {
+                    InstallationOutcome.INSTALLED ->
+                        "Streamlink 설치 및 플러그인 설치/업데이트 완료"
+
+                    InstallationOutcome.UPDATED ->
+                        "Streamlink 업데이트 및 플러그인 설치/업데이트 완료"
+
+                    InstallationOutcome.ALREADY_LATEST ->
+                        "Streamlink는 이미 최신 상태이며 플러그인 설치/업데이트가 완료되었습니다."
+
+                    InstallationOutcome.PREREQUISITE_MISSING,
+                    InstallationOutcome.UNSUPPORTED_OS,
+                    InstallationOutcome.FAILED ->
+                        currentResult.completionMessage
+                }
+
+                appendLog(finalStatus)
+                setStatus(finalStatus)
             } finally {
                 _uiState.update { current ->
                     current.copy(
@@ -393,13 +402,15 @@ class AppController {
                 }
             }
 
-            appendLogSection("설치 확인 검사")
-            setStatus("설치 다시 확인 중...")
-            runEnvironmentCheck(
-                startNewSession = false,
-                userInitiated = true,
-                showPostInstallHint = true
-            )
+            if (shouldRunPostInstallCheck) {
+                appendLogSection("설치 후 환경 다시 확인")
+                setStatus("설치 반영 확인 중...")
+                runEnvironmentCheck(
+                    startNewSession = false,
+                    userInitiated = true,
+                    showPostInstallHint = true
+                )
+            }
         }
     }
 

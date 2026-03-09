@@ -23,6 +23,7 @@ class StreamlinkInstaller(
             OsType.WINDOWS -> installOrUpdateOnWindows(state, onLine, onProgressLine)
             OsType.UNSUPPORTED -> InstallationResult(
                 success = false,
+                outcome = InstallationOutcome.UNSUPPORTED_OS,
                 completionMessage = "현재 운영체제에서는 설치/업데이트를 지원하지 않습니다."
             )
         }
@@ -63,6 +64,7 @@ class StreamlinkInstaller(
         if (!brewProbe.success) {
             return InstallationResult(
                 success = false,
+                outcome = InstallationOutcome.PREREQUISITE_MISSING,
                 completionMessage = "Homebrew 없음"
             )
         }
@@ -107,28 +109,38 @@ class StreamlinkInstaller(
         if (alreadyLatest) {
             return InstallationResult(
                 success = true,
-                completionMessage = "Homebrew 기준 Streamlink는 이미 최신 버전입니다."
+                outcome = InstallationOutcome.ALREADY_LATEST,
+                completionMessage = "Homebrew 기준 Streamlink는 이미 최신 버전입니다.",
+                didChangeStreamlink = false
             )
         }
 
         if (result.exitCode == 0) {
             return InstallationResult(
                 success = true,
+                outcome = if (state.hasStreamlink) {
+                    InstallationOutcome.UPDATED
+                } else {
+                    InstallationOutcome.INSTALLED
+                },
                 completionMessage = if (state.hasStreamlink) {
                     "Streamlink 업데이트 완료"
                 } else {
                     "Streamlink 설치 완료"
-                }
+                },
+                didChangeStreamlink = true
             )
         }
 
         return InstallationResult(
             success = false,
+            outcome = InstallationOutcome.FAILED,
             completionMessage = if (state.hasStreamlink) {
                 "Streamlink 업데이트 실패"
             } else {
                 "Streamlink 설치 실패"
-            }
+            },
+            didChangeStreamlink = false
         )
     }
 
@@ -149,6 +161,7 @@ class StreamlinkInstaller(
         if (!wingetProbe.success) {
             return InstallationResult(
                 success = false,
+                outcome = InstallationOutcome.PREREQUISITE_MISSING,
                 completionMessage = "WinGet 없음"
             )
         }
@@ -196,17 +209,6 @@ class StreamlinkInstaller(
     ): InstallationResult {
         val output = result.fullOutput.lowercase()
 
-        if (result.exitCode == 0) {
-            return InstallationResult(
-                success = true,
-                completionMessage = if (state.hasStreamlink) {
-                    "WinGet으로 Streamlink 업데이트 완료"
-                } else {
-                    "WinGet으로 Streamlink 설치 완료"
-                }
-            )
-        }
-
         if (
             state.hasStreamlink &&
             (
@@ -217,17 +219,38 @@ class StreamlinkInstaller(
         ) {
             return InstallationResult(
                 success = true,
-                completionMessage = "WinGet 기준 Streamlink는 이미 최신 버전입니다."
+                outcome = InstallationOutcome.ALREADY_LATEST,
+                completionMessage = "WinGet 기준 Streamlink는 이미 최신 버전입니다.",
+                didChangeStreamlink = false
+            )
+        }
+
+        if (result.exitCode == 0) {
+            return InstallationResult(
+                success = true,
+                outcome = if (state.hasStreamlink) {
+                    InstallationOutcome.UPDATED
+                } else {
+                    InstallationOutcome.INSTALLED
+                },
+                completionMessage = if (state.hasStreamlink) {
+                    "WinGet으로 Streamlink 업데이트 완료"
+                } else {
+                    "WinGet으로 Streamlink 설치 완료"
+                },
+                didChangeStreamlink = true
             )
         }
 
         return InstallationResult(
             success = false,
+            outcome = InstallationOutcome.FAILED,
             completionMessage = if (state.hasStreamlink) {
                 "WinGet 업데이트 실패"
             } else {
                 "WinGet 설치 실패"
-            }
+            },
+            didChangeStreamlink = false
         )
     }
 }
