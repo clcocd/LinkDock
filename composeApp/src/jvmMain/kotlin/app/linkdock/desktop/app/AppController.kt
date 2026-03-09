@@ -14,6 +14,9 @@ import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
 import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
+import app.linkdock.desktop.storage.AppSettings
+import app.linkdock.desktop.storage.AppSettingsStore
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +45,8 @@ class AppController {
 
     private val envCheckStore = EnvCheckStore()
 
+    private val appSettingsStore = AppSettingsStore(platformResolver)
+
     @Volatile
     private var currentDownloadProcess: Process? = null
 
@@ -54,6 +59,7 @@ class AppController {
     init {
         restoreCachedEnvironmentState()
         startBackgroundEnvironmentRefresh()
+        restoreSavedOutputDirectoryOrDefault()
     }
 
     private fun isInputLocked(state: AppUiState = _uiState.value): Boolean {
@@ -94,6 +100,32 @@ class AppController {
                 userInitiated = false
             )
         }
+    }
+
+    private fun restoreSavedOutputDirectoryOrDefault() {
+        val savedPath = appSettingsStore.load()?.lastSavePath
+        val defaultPath = platformResolver.resolveOutputDir("")
+
+        val savedPathInvalid =
+            !savedPath.isNullOrBlank() && !isUsableDirectory(savedPath)
+
+        val visiblePath = when {
+            !savedPath.isNullOrBlank() && !savedPathInvalid -> savedPath
+            else -> defaultPath
+        }
+
+        if (savedPathInvalid) {
+            appendLog("저장된 경로를 사용할 수 없어 기본 다운로드 폴더를 사용합니다.")
+        }
+
+        _uiState.value = _uiState.value.copy(outputDir = visiblePath)
+    }
+
+    private fun isUsableDirectory(path: String): Boolean {
+        return runCatching {
+            val dir = File(path)
+            dir.exists() && dir.isDirectory && dir.canWrite()
+        }.getOrDefault(false)
     }
 
     fun setThemeMode(themeMode: ThemeMode) {
@@ -163,7 +195,12 @@ class AppController {
 
     fun updateOutputDir(value: String) {
         if (isInputLocked()) return
+
         _uiState.value = _uiState.value.copy(outputDir = value)
+
+        appSettingsStore.save(
+            AppSettings(lastSavePath = value)
+        )
     }
 
     fun runEnvironmentCheck() {
