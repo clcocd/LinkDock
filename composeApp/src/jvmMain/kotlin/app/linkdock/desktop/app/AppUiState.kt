@@ -5,7 +5,14 @@ import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadProgressInfo
 
+enum class EnvironmentSource {
+    UNKNOWN,
+    CACHED,
+    VERIFIED
+}
+
 data class AppUiState(
+
     val selectedService: ServiceType? = null,
     val email: String = "",
     val password: String = "",
@@ -28,6 +35,7 @@ data class AppUiState(
     val hasStreamlink: Boolean = false,
     val hasBrew: Boolean = false,
     val hasWinget: Boolean = false,
+    val environmentSource: EnvironmentSource = EnvironmentSource.UNKNOWN,
 
     val lastEnvironmentCheckedAtEpochMillis: Long? = null,
 

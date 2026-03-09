@@ -66,6 +66,14 @@ class AppController {
         return state.isDownloading || state.isInstalling || state.isCheckingEnvironment
     }
 
+    private fun isEnvironmentVerified(state: AppUiState = _uiState.value): Boolean {
+        return state.environmentSource == EnvironmentSource.VERIFIED
+    }
+
+    private fun hasVerifiedStreamlink(state: AppUiState = _uiState.value): Boolean {
+        return isEnvironmentVerified(state) && state.hasStreamlink
+    }
+
     private fun removeHangul(value: String): String {
         return value.replace(Regex("[ㄱ-ㅎㅏ-ㅣ가-힣]"), "")
     }
@@ -79,6 +87,7 @@ class AppController {
                 hasStreamlink = cache.hasStreamlink,
                 hasBrew = cache.hasBrew,
                 hasWinget = cache.hasWinget,
+                environmentSource = EnvironmentSource.CACHED,
                 lastEnvironmentCheckedAtEpochMillis = cache.checkedAtEpochMillis,
                 statusMessage = if (cache.hasStreamlink) {
                     "이전 환경 검사 결과 불러옴"
@@ -96,7 +105,8 @@ class AppController {
             delay(400)
             runEnvironmentCheck(
                 startNewSession = false,
-                userInitiated = false
+                userInitiated = false,
+                silentIfBusy = true
             )
         }
     }
@@ -213,12 +223,21 @@ class AppController {
     private fun runEnvironmentCheck(
         startNewSession: Boolean,
         userInitiated: Boolean,
-        showPostInstallHint: Boolean = false
+        showPostInstallHint: Boolean = false,
+        silentIfBusy: Boolean = false
     ) {
         val state = _uiState.value
 
-        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
-            appendLog("작업 중에는 환경 검사를 실행하지 않습니다.")
+        val busy =
+            state.isDownloading ||
+                    state.isInstalling ||
+                    state.isCheckingEnvironment ||
+                    state.isRefreshingEnvironment
+
+        if (busy) {
+            if (!silentIfBusy) {
+                appendLog("작업 중에는 환경 검사를 실행하지 않습니다.")
+            }
             return
         }
 
@@ -239,14 +258,14 @@ class AppController {
                         appendLog("환경 다시 검사 시작")
                     }
                     setStatus("환경 확인 중...")
-                } else {
-                    appendLog("백그라운드 환경 확인 시작")
                 }
 
                 val result = environmentInspector.inspect()
 
-                result.logs.forEach { log ->
-                    appendLog(log)
+                if (userInitiated) {
+                    result.logs.forEach { log ->
+                        appendLog(log)
+                    }
                 }
 
                 updateEnvironmentState(
@@ -255,16 +274,6 @@ class AppController {
                     hasBrew = result.hasBrew,
                     hasWinget = result.hasWinget
                 )
-
-                if (
-                    showPostInstallHint &&
-                    result.osType == OsType.WINDOWS &&
-                    !result.hasStreamlink
-                ) {
-                    appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
-                    appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
-                    setStatus("설치 완료, 앱 재실행 필요할 수 있음")
-                }
 
                 envCheckStore.save(
                     EnvCheckCache(
@@ -276,19 +285,17 @@ class AppController {
                     )
                 )
 
-                _uiState.update { current ->
-                    current.copy(
-                        lastEnvironmentCheckedAtEpochMillis = System.currentTimeMillis()
-                    )
-                }
-
-                if (userInitiated) {
-                    if (!(showPostInstallHint && result.osType == OsType.WINDOWS && !result.hasStreamlink)) {
-                        setStatus("환경 검사 완료")
-                    }
+                if (
+                    showPostInstallHint &&
+                    result.osType == OsType.WINDOWS &&
+                    !result.hasStreamlink
+                ) {
+                    appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
+                    appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
+                    setStatus("설치 완료, 앱 재실행 필요할 수 있음")
+                } else if (userInitiated) {
+                    setStatus("환경 검사 완료")
                     appendLog("환경 검사 완료")
-                } else {
-                    appendLog("백그라운드 환경 확인 완료")
                 }
             } finally {
                 _uiState.update { current ->
@@ -305,27 +312,27 @@ class AppController {
     fun installOrUpdateStreamlink() {
         val state = _uiState.value
 
-        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment) {
+        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
             appendLog("다른 작업이 진행 중입니다.")
             return
         }
 
-        scope.launch {
-            startNewLogSession(
-                if (state.hasStreamlink) {
-                    "Streamlink 업데이트 시작"
-                } else {
-                    "Streamlink 설치 시작"
-                }
-            )
+        val verifiedHasStreamlink = hasVerifiedStreamlink(state)
 
-            setStatus(
-                if (state.hasStreamlink) {
-                    "Streamlink 업데이트 준비 중..."
-                } else {
-                    "Streamlink 설치 준비 중..."
-                }
-            )
+        val installActionLabel = when {
+            verifiedHasStreamlink -> "업데이트"
+            isEnvironmentVerified(state) -> "설치"
+            else -> "설치/업데이트"
+        }
+
+        val installState = state.copy(
+            hasStreamlink = verifiedHasStreamlink
+        )
+
+        scope.launch {
+            startNewLogSession("Streamlink $installActionLabel 시작")
+
+            setStatus("Streamlink $installActionLabel 준비 중...")
 
             _uiState.update { current ->
                 current.copy(
@@ -336,7 +343,7 @@ class AppController {
 
             try {
                 val streamlinkResult = streamlinkInstaller.installOrUpdate(
-                    state = state,
+                    state = installState,
                     onLine = { line ->
                         appendLog(line)
                     },
@@ -393,8 +400,18 @@ class AppController {
     fun startDownload() {
         val state = _uiState.value
 
-        if (state.isDownloading || state.isInstalling) {
+        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
             appendLog("다른 작업이 진행 중입니다.")
+            return
+        }
+
+        if (!isEnvironmentVerified(state)) {
+            startNewLogSession("다운로드 시작 실패")
+            appendLog("환경 자동 확인이 아직 끝나지 않았습니다.")
+            appendLog("잠시 후 다시 시도하거나 환경 다시 확인을 눌러주세요.")
+            _uiState.update { current ->
+                current.copy(statusMessage = "환경 확인 필요")
+            }
             return
         }
 
@@ -579,6 +596,7 @@ class AppController {
                 hasStreamlink = hasStreamlink,
                 hasBrew = hasBrew,
                 hasWinget = hasWinget,
+                environmentSource = EnvironmentSource.VERIFIED,
                 lastEnvironmentCheckedAtEpochMillis = System.currentTimeMillis()
             )
         }

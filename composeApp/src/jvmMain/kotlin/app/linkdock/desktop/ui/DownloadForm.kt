@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppUiState
 import app.linkdock.desktop.domain.ServiceType
+import app.linkdock.desktop.app.EnvironmentSource
 
 @Composable
 fun DownloadForm(
@@ -31,15 +32,19 @@ fun DownloadForm(
     uiState: AppUiState,
     modifier: Modifier = Modifier
 ) {
-    val isTaskRunning =
+    val isEditLocked =
         uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
 
-    val canEditFields = !isTaskRunning
-    val canRunEnvironmentCheck = !isTaskRunning
-    val canInstallOrUpdate = !isTaskRunning
+    val isActionLocked =
+        isEditLocked || uiState.isRefreshingEnvironment
+
+    val canEditFields = !isEditLocked
+    val canRunEnvironmentCheck = !isActionLocked
+    val canInstallOrUpdate = !isActionLocked
 
     val canStartDownload =
-        !isTaskRunning &&
+        !isActionLocked &&
+                uiState.environmentSource == EnvironmentSource.VERIFIED &&
                 uiState.selectedService != null &&
                 uiState.hasStreamlink &&
                 uiState.email.isNotBlank() &&
@@ -196,6 +201,7 @@ private fun ActionCard(
                     Text(
                         when {
                             uiState.isCheckingEnvironment -> "확인 중"
+                            uiState.isRefreshingEnvironment -> "자동 확인 중"
                             else -> "환경 다시 확인"
                         }
                     )
@@ -209,6 +215,7 @@ private fun ActionCard(
                     Text(
                         when {
                             uiState.isInstalling -> "설치/업데이트 중"
+                            uiState.environmentSource != EnvironmentSource.VERIFIED -> "Streamlink 설치/업데이트"
                             uiState.hasStreamlink -> "Streamlink 업데이트"
                             else -> "Streamlink 설치"
                         }
@@ -295,13 +302,35 @@ private fun ServiceSelector(
 }
 
 private fun buildActionHint(uiState: AppUiState): String? = when {
-    uiState.isCheckingEnvironment -> "환경 검사 진행 중입니다. 완료될 때까지 기다려 주세요."
-    uiState.isDownloading -> "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
-    uiState.isInstalling -> "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
-    uiState.selectedService == null -> "먼저 서비스를 선택하세요."
-    !uiState.hasStreamlink -> "Streamlink가 감지되지 않습니다. 설치하거나 다시 확인하세요."
-    uiState.email.isBlank() -> "이메일을 입력하세요."
-    uiState.password.isBlank() -> "비밀번호를 입력하세요."
-    uiState.url.isBlank() -> "다운로드할 URL을 입력하세요."
+    uiState.isRefreshingEnvironment ->
+        "앱 시작 후 환경 자동 확인 중입니다. 완료되면 버튼 상태가 갱신됩니다."
+
+    uiState.isCheckingEnvironment ->
+        "환경 검사 진행 중입니다. 완료될 때까지 기다려 주세요."
+
+    uiState.isDownloading ->
+        "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
+
+    uiState.isInstalling ->
+        "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
+
+    uiState.environmentSource == EnvironmentSource.CACHED ->
+        "이전 검사 결과를 먼저 보여주고 있습니다."
+
+    uiState.selectedService == null ->
+        "먼저 서비스를 선택하세요."
+
+    uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasStreamlink ->
+        "Streamlink가 감지되지 않습니다. 설치하거나 다시 확인하세요."
+
+    uiState.email.isBlank() ->
+        "이메일을 입력하세요."
+
+    uiState.password.isBlank() ->
+        "비밀번호를 입력하세요."
+
+    uiState.url.isBlank() ->
+        "다운로드할 URL을 입력하세요."
+
     else -> null
 }
