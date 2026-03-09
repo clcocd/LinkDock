@@ -297,6 +297,16 @@ class AppController {
                     setStatus("환경 검사 완료")
                     appendLog("환경 검사 완료")
                 }
+            } catch (t: Throwable) {
+                val errorMessage = t.message?.takeIf { it.isNotBlank() }
+                    ?: t::class.simpleName
+                    ?: "알 수 없는 오류"
+
+                if (userInitiated) {
+                    appendLog("환경 검사 중 오류 발생: $errorMessage")
+                }
+
+                setStatus("환경 검사 실패")
             } finally {
                 _uiState.update { current ->
                     if (userInitiated) {
