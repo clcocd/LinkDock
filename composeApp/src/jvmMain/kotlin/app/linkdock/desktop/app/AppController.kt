@@ -88,16 +88,9 @@ class AppController {
                 hasBrew = cache.hasBrew,
                 hasWinget = cache.hasWinget,
                 environmentSource = EnvironmentSource.CACHED,
-                lastEnvironmentCheckedAtEpochMillis = cache.checkedAtEpochMillis,
-                statusMessage = if (cache.hasStreamlink) {
-                    "이전 환경 검사 결과 불러옴"
-                } else {
-                    "이전 환경 검사 결과: Streamlink 없음"
-                }
+                lastEnvironmentCheckedAtEpochMillis = cache.checkedAtEpochMillis
             )
         }
-
-        appendLog("이전 환경 검사 결과를 불러왔습니다.")
     }
 
     private fun startBackgroundEnvironmentRefresh() {

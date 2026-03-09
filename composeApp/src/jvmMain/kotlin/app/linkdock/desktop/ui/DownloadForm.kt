@@ -302,8 +302,6 @@ private fun ServiceSelector(
 }
 
 private fun buildActionHint(uiState: AppUiState): String? = when {
-    uiState.isRefreshingEnvironment ->
-        "앱 시작 후 환경 자동 확인 중입니다. 완료되면 버튼 상태가 갱신됩니다."
 
     uiState.isCheckingEnvironment ->
         "환경 검사 진행 중입니다. 완료될 때까지 기다려 주세요."
@@ -313,9 +311,6 @@ private fun buildActionHint(uiState: AppUiState): String? = when {
 
     uiState.isInstalling ->
         "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
-
-    uiState.environmentSource == EnvironmentSource.CACHED ->
-        "이전 검사 결과를 먼저 보여주고 있습니다."
 
     uiState.selectedService == null ->
         "먼저 서비스를 선택하세요."

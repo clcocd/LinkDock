@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.LinearProgressIndicator
 import app.linkdock.desktop.app.AppUiState
+import app.linkdock.desktop.app.EnvironmentSource
 import app.linkdock.desktop.domain.OsType
 
 @Composable
@@ -141,12 +142,17 @@ fun LogPanel(
 }
 
 private fun buildEnvironmentHint(uiState: AppUiState): String? {
-    if (uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment) {
+    if (
+        uiState.isDownloading ||
+        uiState.isInstalling ||
+        uiState.isCheckingEnvironment ||
+        uiState.environmentSource != EnvironmentSource.VERIFIED
+    ) {
         return null
     }
 
     return when (uiState.osType) {
-        null -> "환경 상태: 아직 검사하지 않음"
+        null -> null
         OsType.UNSUPPORTED -> "환경 상태: 지원하지 않는 운영체제"
         OsType.MAC, OsType.WINDOWS ->
             if (uiState.hasStreamlink) "Streamlink 설치됨" else "Streamlink 미설치"
