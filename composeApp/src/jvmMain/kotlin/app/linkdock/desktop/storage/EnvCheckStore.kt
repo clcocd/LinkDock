@@ -1,25 +1,29 @@
 package app.linkdock.desktop.storage
 
 import app.linkdock.desktop.domain.OsType
+import app.linkdock.desktop.platform.PlatformResolver
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Properties
+import kotlin.io.path.Path
 
 class EnvCheckStore(
-    private val appName: String = "LinkDock"
+    private val platformResolver: PlatformResolver = PlatformResolver()
 ) {
-    private val filePath: Path by lazy {
-        resolveAppDataDir()
-            .resolve("env-check.properties")
+    private val filePath: Path? by lazy {
+        val osType = platformResolver.detectOsType()
+        val appDataDir = platformResolver.resolveAppDataDir(osType) ?: return@lazy null
+        Path(appDataDir).resolve("env-check.properties")
     }
 
     fun load(): EnvCheckCache? {
+        val path = filePath ?: return null
+
         return try {
-            if (!Files.exists(filePath)) return null
+            if (!Files.exists(path)) return null
 
             val props = Properties()
-            Files.newInputStream(filePath).use { props.load(it) }
+            Files.newInputStream(path).use { props.load(it) }
 
             val checkedAt = props.getProperty("checkedAtEpochMillis")?.toLongOrNull() ?: return null
             val osType = runCatching {
@@ -39,8 +43,10 @@ class EnvCheckStore(
     }
 
     fun save(cache: EnvCheckCache) {
+        val path = filePath ?: return
+
         runCatching {
-            Files.createDirectories(filePath.parent)
+            Files.createDirectories(path.parent)
 
             val props = Properties().apply {
                 setProperty("checkedAtEpochMillis", cache.checkedAtEpochMillis.toString())
@@ -50,31 +56,7 @@ class EnvCheckStore(
                 setProperty("hasWinget", cache.hasWinget.toString())
             }
 
-            Files.newOutputStream(filePath).use { props.store(it, null) }
-        }
-    }
-
-    private fun resolveAppDataDir(): Path {
-        val osName = System.getProperty("os.name").lowercase()
-        val userHome = System.getProperty("user.home")
-
-        return when {
-            osName.contains("win") -> {
-                val appData = System.getenv("APPDATA")
-                if (!appData.isNullOrBlank()) {
-                    Paths.get(appData, appName)
-                } else {
-                    Paths.get(userHome, "AppData", "Roaming", appName)
-                }
-            }
-
-            osName.contains("mac") -> {
-                Paths.get(userHome, "Library", "Application Support", appName)
-            }
-
-            else -> {
-                Paths.get(userHome, ".$appName")
-            }
+            Files.newOutputStream(path).use { props.store(it, null) }
         }
     }
 }

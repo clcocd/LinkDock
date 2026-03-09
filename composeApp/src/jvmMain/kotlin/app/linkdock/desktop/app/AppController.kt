@@ -44,7 +44,7 @@ class AppController {
 
     private val pluginInstaller = PluginInstaller(platformResolver)
 
-    private val envCheckStore = EnvCheckStore()
+    private val envCheckStore = EnvCheckStore(platformResolver)
 
     private val appSettingsStore = AppSettingsStore(platformResolver)
 

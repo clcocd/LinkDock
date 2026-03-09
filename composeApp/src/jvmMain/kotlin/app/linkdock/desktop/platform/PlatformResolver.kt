@@ -38,17 +38,21 @@ class PlatformResolver {
     }
 
     fun resolveAppDataDir(osType: OsType): String? {
+        val home = System.getProperty("user.home").orEmpty()
+
         return when (osType) {
             OsType.MAC -> {
-                val home = System.getProperty("user.home").orEmpty()
                 if (home.isBlank()) null
                 else "$home/Library/Application Support/LinkDock"
             }
 
             OsType.WINDOWS -> {
-                val appData = System.getenv("APPDATA").orEmpty()
-                if (appData.isBlank()) null
-                else "$appData\\LinkDock"
+                val appData = System.getenv("APPDATA")
+                when {
+                    !appData.isNullOrBlank() -> "$appData\\LinkDock"
+                    home.isNotBlank() -> "$home\\AppData\\Roaming\\LinkDock"
+                    else -> null
+                }
             }
 
             OsType.UNSUPPORTED -> null
