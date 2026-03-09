@@ -64,9 +64,32 @@ class StreamlinkInstaller(
         )
 
         onProgressLine(null)
+        return classifyBrewResult(state, result)
 
-        return if (result.success) {
-            InstallationResult(
+    }
+
+    private fun classifyBrewResult(
+        state: AppUiState,
+        result: CommandResult
+    ): InstallationResult {
+        val output = result.fullOutput.lowercase()
+
+        val alreadyLatest = state.hasStreamlink && (
+                "already installed and up-to-date" in output ||
+                        "no packages to upgrade" in output ||
+                        ("warning:" in output && "already installed" in output && "streamlink" in output) ||
+                        ("already installed" in output && "streamlink" in output)
+                )
+
+        if (alreadyLatest) {
+            return InstallationResult(
+                success = true,
+                completionMessage = "Homebrew 기준 Streamlink는 이미 최신 버전입니다."
+            )
+        }
+
+        if (result.exitCode == 0) {
+            return InstallationResult(
                 success = true,
                 completionMessage = if (state.hasStreamlink) {
                     "Streamlink 업데이트 완료"
@@ -74,16 +97,16 @@ class StreamlinkInstaller(
                     "Streamlink 설치 완료"
                 }
             )
-        } else {
-            InstallationResult(
-                success = false,
-                completionMessage = if (state.hasStreamlink) {
-                    "Streamlink 업데이트 실패"
-                } else {
-                    "Streamlink 설치 실패"
-                }
-            )
         }
+
+        return InstallationResult(
+            success = false,
+            completionMessage = if (state.hasStreamlink) {
+                "Streamlink 업데이트 실패"
+            } else {
+                "Streamlink 설치 실패"
+            }
+        )
     }
 
     private fun installOrUpdateOnWindows(
