@@ -58,7 +58,11 @@ class StreamlinkInstaller(
         onProgressLine: (String?) -> Unit
     ): InstallationResult {
         val preferredBrewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
-        val brewProbe = commandRunner.runCommandWithFallback("brew", preferredBrewPath, "--version")
+        val brewProbe = commandRunner.runCommandWithFallback(
+            commandName = "brew",
+            preferredBrewPath,
+            "--version"
+        )
 
         if (!brewProbe.success) {
             return InstallationResult(
@@ -67,15 +71,9 @@ class StreamlinkInstaller(
             )
         }
 
-        val streamlinkPath = platformResolver.findCommandPath(OsType.MAC, "streamlink")
-        val actualHasStreamlink = commandRunner
-            .runCommandWithFallback("streamlink", streamlinkPath, "--version")
-            .success
-
-        val effectiveState = state.copy(hasStreamlink = actualHasStreamlink)
         val brewExecutable = preferredBrewPath ?: "brew"
 
-        val command = if (effectiveState.hasStreamlink) {
+        val command = if (state.hasStreamlink) {
             listOf(brewExecutable, "upgrade", "streamlink")
         } else {
             listOf(brewExecutable, "install", "streamlink")
@@ -83,7 +81,7 @@ class StreamlinkInstaller(
 
         return runPackageManagerCommand(
             startLabel = "Homebrew로",
-            state = effectiveState,
+            state = state,
             command = command,
             onLine = onLine,
             onProgressLine = onProgressLine,
@@ -137,33 +135,15 @@ class StreamlinkInstaller(
         onLine: (String) -> Unit,
         onProgressLine: (String?) -> Unit
     ): InstallationResult {
-        val wingetExecutable =
-            platformResolver.findCommandPath(OsType.WINDOWS, "winget")
-
-        val wingetProbe = commandRunner.runCommandWithFallback(
-            "winget",
-            wingetExecutable,
-            "--version"
-        )
-
-        if (!wingetProbe.success) {
+        if (!state.hasWinget) {
             return InstallationResult(
                 success = false,
                 completionMessage = "WinGet 없음"
             )
         }
 
-        val streamlinkPath = platformResolver.findCommandPath(OsType.WINDOWS, "streamlink")
-        val actualHasStreamlink = commandRunner
-            .runCommandWithFallback("streamlink", streamlinkPath, "--version")
-            .success
-
-        val effectiveState = state.copy(
-            hasWinget = true,
-            hasStreamlink = actualHasStreamlink
-        )
-
-        val executable = wingetExecutable ?: "winget"
+        val wingetExecutable =
+            platformResolver.findCommandPath(OsType.WINDOWS, "winget") ?: "winget"
 
         val commonArgs = listOf(
             "-e",
@@ -174,15 +154,15 @@ class StreamlinkInstaller(
             "--disable-interactivity"
         )
 
-        val command = if (effectiveState.hasStreamlink) {
-            listOf(executable, "upgrade") + commonArgs
+        val command = if (state.hasStreamlink) {
+            listOf(wingetExecutable, "upgrade") + commonArgs
         } else {
-            listOf(executable, "install") + commonArgs
+            listOf(wingetExecutable, "install") + commonArgs
         }
 
         return runPackageManagerCommand(
             startLabel = "WinGet으로",
-            state = effectiveState,
+            state = state,
             command = command,
             onLine = onLine,
             onProgressLine = onProgressLine,
