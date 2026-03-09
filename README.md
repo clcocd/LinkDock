@@ -25,13 +25,11 @@ Windows와 macOS에서 사용할 수 있으며, 환경 검사, 저장 경로 복
 
 ### Windows
 
-* 배포된 실행 파일 또는 압축 파일을 다운로드합니다.
-* 압축 파일인 경우 원하는 위치에 압축을 해제한 뒤 실행합니다.
+- [Windows 다운로드](https://github.com/clcocd/LinkDock/releases/latest/download/linkdock.exe)
 
 ### macOS
 
-* 배포된 앱 파일 또는 압축 파일을 다운로드합니다.
-* 앱을 Applications 폴더로 옮긴 뒤 실행합니다.
+- Apple Silicon(mac-aarch64)용 파일은 [Releases 페이지](../../releases)에서 다운로드하세요.
 
 ## 사용 방법
 
