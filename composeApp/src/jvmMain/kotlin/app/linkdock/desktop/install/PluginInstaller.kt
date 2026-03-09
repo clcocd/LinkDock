@@ -65,6 +65,12 @@ class PluginInstaller(
                     )
                 }
 
+                if (targetFile.isFile && filesHaveSameContent(targetFile, tempFile)) {
+                    tempFile.delete()
+                    onLine("변경 없음, 건너뜀: ${asset.fileName}")
+                    continue
+                }
+
                 if (targetFile.isFile) {
                     targetFile.copyTo(backupFile, overwrite = true)
                     onLine("기존 파일 백업: ${backupFile.name}")
@@ -98,6 +104,28 @@ class PluginInstaller(
         connection.getInputStream().use { input ->
             targetFile.outputStream().use { output ->
                 input.copyTo(output)
+            }
+        }
+    }
+
+    private fun filesHaveSameContent(first: File, second: File): Boolean {
+        if (!first.isFile || !second.isFile) return false
+        if (first.length() != second.length()) return false
+
+        first.inputStream().buffered().use { firstInput ->
+            second.inputStream().buffered().use { secondInput ->
+                while (true) {
+                    val firstByte = firstInput.read()
+                    val secondByte = secondInput.read()
+
+                    if (firstByte != secondByte) {
+                        return false
+                    }
+
+                    if (firstByte == -1) {
+                        return true
+                    }
+                }
             }
         }
     }
