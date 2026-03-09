@@ -25,6 +25,7 @@ import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppUiState
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.app.EnvironmentSource
+import app.linkdock.desktop.app.PostInstallState
 
 @Composable
 fun DownloadForm(
@@ -296,6 +297,15 @@ private fun ServiceSelector(
 }
 
 private fun buildActionHint(uiState: AppUiState): String? = when {
+
+    uiState.postInstallState == PostInstallState.VERIFYING ->
+        "설치 반영 상태를 확인 중입니다."
+
+    uiState.postInstallState == PostInstallState.MAY_NEED_RESTART ->
+        "설치는 완료되었지만 앱을 다시 실행해야 반영될 수 있습니다."
+
+    uiState.postInstallState == PostInstallState.NEEDS_RECHECK ->
+        "설치 후 상태를 다시 확인해 주세요."
 
     uiState.isCheckingEnvironment ->
         "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."

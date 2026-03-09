@@ -277,14 +277,44 @@ class AppController {
                     )
                 )
 
-                if (
-                    showPostInstallHint &&
-                    result.osType == OsType.WINDOWS &&
-                    !result.hasStreamlink
-                ) {
-                    appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
-                    appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
-                    setStatus("설치 완료, 앱 재실행 필요할 수 있음")
+                if (showPostInstallHint) {
+                    val nextPostInstallState = when {
+                        result.osType == OsType.WINDOWS && !result.hasStreamlink ->
+                            PostInstallState.MAY_NEED_RESTART
+
+                        !result.hasStreamlink ->
+                            PostInstallState.NEEDS_RECHECK
+
+                        else ->
+                            PostInstallState.NONE
+                    }
+
+                    _uiState.update { current ->
+                        current.copy(postInstallState = nextPostInstallState)
+                    }
+
+                    when (nextPostInstallState) {
+                        PostInstallState.MAY_NEED_RESTART -> {
+                            appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
+                            appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
+                            setStatus("설치 완료, 앱 재실행 필요할 수 있음")
+                        }
+
+                        PostInstallState.NEEDS_RECHECK -> {
+                            appendLog("설치 후에도 아직 Streamlink가 감지되지 않았습니다.")
+                            appendLog("잠시 후 다시 설치 확인을 다시 실행해 주세요.")
+                            setStatus("설치 후 다시 확인 필요")
+                        }
+
+                        PostInstallState.NONE -> {
+                            setStatus("설치 후 상태 확인 완료")
+                            appendLog("설치 후 상태 확인 완료")
+                        }
+
+                        PostInstallState.VERIFYING -> {
+                            // 여기까지 오면 안 되므로 아무 처리 안 함
+                        }
+                    }
                 } else if (userInitiated) {
                     setStatus("설치 확인 완료")
                     appendLog("설치 확인 완료")
@@ -298,6 +328,12 @@ class AppController {
 
                 if (userInitiated) {
                     appendLog("설치 확인 중 오류 발생: $errorMessage")
+                }
+
+                if (showPostInstallHint) {
+                    _uiState.update { current ->
+                        current.copy(postInstallState = PostInstallState.NEEDS_RECHECK)
+                    }
                 }
 
                 setStatus("설치 확인 실패")
@@ -328,7 +364,8 @@ class AppController {
             _uiState.update { current ->
                 current.copy(
                     isInstalling = true,
-                    installProgressText = null
+                    installProgressText = null,
+                    postInstallState = PostInstallState.NONE
                 )
             }
 
@@ -403,7 +440,11 @@ class AppController {
             }
 
             if (shouldRunPostInstallCheck) {
-                appendLogSection("설치 후 환경 다시 확인")
+                _uiState.update { current ->
+                    current.copy(postInstallState = PostInstallState.VERIFYING)
+                }
+
+                appendLogSection("설치 후 설치 다시 확인")
                 setStatus("설치 반영 확인 중...")
                 runEnvironmentCheck(
                     startNewSession = false,

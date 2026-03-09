@@ -11,6 +11,13 @@ enum class EnvironmentSource {
     VERIFIED
 }
 
+enum class PostInstallState {
+    NONE,
+    VERIFYING,
+    NEEDS_RECHECK,
+    MAY_NEED_RESTART
+}
+
 data class AppUiState(
 
     val selectedService: ServiceType? = null,
@@ -36,6 +43,7 @@ data class AppUiState(
     val hasBrew: Boolean = false,
     val hasWinget: Boolean = false,
     val environmentSource: EnvironmentSource = EnvironmentSource.UNKNOWN,
+    val postInstallState: PostInstallState = PostInstallState.NONE,
 
     val lastEnvironmentCheckedAtEpochMillis: Long? = null,
 
