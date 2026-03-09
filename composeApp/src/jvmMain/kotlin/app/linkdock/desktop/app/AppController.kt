@@ -229,7 +229,7 @@ class AppController {
 
         if (busy) {
             if (!silentIfBusy) {
-                appendLog("작업 중에는 환경 검사를 실행하지 않습니다.")
+                appendLog("작업 중에는 설치 확인을 실행하지 않습니다.")
             }
             return
         }
@@ -246,11 +246,11 @@ class AppController {
             try {
                 if (userInitiated) {
                     if (startNewSession) {
-                        startNewLogSession("환경 검사 시작")
+                        startNewLogSession("설치 확인 시작")
                     } else {
-                        appendLog("환경 다시 검사 시작")
+                        appendLog("설치 다시 확인 시작")
                     }
-                    setStatus("환경 확인 중...")
+                    setStatus("설치 확인 중...")
                 }
 
                 val result = environmentInspector.inspect()
@@ -287,8 +287,8 @@ class AppController {
                     appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
                     setStatus("설치 완료, 앱 재실행 필요할 수 있음")
                 } else if (userInitiated) {
-                    setStatus("환경 검사 완료")
-                    appendLog("환경 검사 완료")
+                    setStatus("설치 확인 완료")
+                    appendLog("설치 확인 완료")
                 }
             } catch (t: Throwable) {
                 val errorMessage = t.message?.takeIf { it.isNotBlank() }
@@ -296,10 +296,10 @@ class AppController {
                     ?: "알 수 없는 오류"
 
                 if (userInitiated) {
-                    appendLog("환경 검사 중 오류 발생: $errorMessage")
+                    appendLog("설치 확인 중 오류 발생: $errorMessage")
                 }
 
-                setStatus("환경 검사 실패")
+                setStatus("설치 확인 실패")
             } finally {
                 _uiState.update { current ->
                     if (userInitiated) {
@@ -390,8 +390,8 @@ class AppController {
                 }
             }
 
-            appendLogSection("설치 후 환경 다시 검사")
-            setStatus("환경 다시 검사 중...")
+            appendLogSection("설치 확인 검사")
+            setStatus("설치 다시 확인 중...")
             runEnvironmentCheck(
                 startNewSession = false,
                 userInitiated = true,
@@ -410,10 +410,10 @@ class AppController {
 
         if (!isEnvironmentVerified(state)) {
             startNewLogSession("다운로드 시작 실패")
-            appendLog("환경 자동 확인이 아직 끝나지 않았습니다.")
-            appendLog("잠시 후 다시 시도하거나 환경 다시 확인을 눌러주세요.")
+            appendLog("설치 확인이 아직 끝나지 않았습니다.")
+            appendLog("잠시 후 다시 시도하거나 설치 확인을 눌러주세요.")
             _uiState.update { current ->
-                current.copy(statusMessage = "환경 확인 필요")
+                current.copy(statusMessage = "설치 확인 필요")
             }
             return
         }

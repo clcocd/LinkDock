@@ -298,7 +298,7 @@ private fun ServiceSelector(
 private fun buildActionHint(uiState: AppUiState): String? = when {
 
     uiState.isCheckingEnvironment ->
-        "환경 검사 진행 중입니다. 완료될 때까지 기다려 주세요."
+        "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."
 
     uiState.isDownloading ->
         "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
