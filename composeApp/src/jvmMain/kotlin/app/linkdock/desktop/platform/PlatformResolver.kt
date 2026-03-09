@@ -113,10 +113,6 @@ class PlatformResolver {
                 "$localAppData\\Microsoft\\WindowsApps\\winget.exe"
             )
 
-            "choco" -> listOf(
-                "$programData\\chocolatey\\bin\\choco.exe"
-            )
-
             "streamlink" -> listOf(
                 "$localAppData\\Programs\\Streamlink\\bin\\streamlink.exe",
                 "$localAppData\\Streamlink\\bin\\streamlink.exe",

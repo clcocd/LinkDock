@@ -79,7 +79,6 @@ class AppController {
                 hasStreamlink = cache.hasStreamlink,
                 hasBrew = cache.hasBrew,
                 hasWinget = cache.hasWinget,
-                hasChoco = cache.hasChoco,
                 lastEnvironmentCheckedAtEpochMillis = cache.checkedAtEpochMillis,
                 statusMessage = if (cache.hasStreamlink) {
                     "이전 환경 검사 결과 불러옴"
@@ -254,8 +253,7 @@ class AppController {
                     osType = result.osType,
                     hasStreamlink = result.hasStreamlink,
                     hasBrew = result.hasBrew,
-                    hasWinget = result.hasWinget,
-                    hasChoco = result.hasChoco
+                    hasWinget = result.hasWinget
                 )
 
                 if (
@@ -274,8 +272,7 @@ class AppController {
                         osType = result.osType,
                         hasStreamlink = result.hasStreamlink,
                         hasBrew = result.hasBrew,
-                        hasWinget = result.hasWinget,
-                        hasChoco = result.hasChoco
+                        hasWinget = result.hasWinget
                     )
                 )
 
@@ -574,8 +571,7 @@ class AppController {
         osType: OsType,
         hasStreamlink: Boolean,
         hasBrew: Boolean = false,
-        hasWinget: Boolean = false,
-        hasChoco: Boolean = false
+        hasWinget: Boolean = false
     ) {
         _uiState.update { current ->
             current.copy(
@@ -583,7 +579,6 @@ class AppController {
                 hasStreamlink = hasStreamlink,
                 hasBrew = hasBrew,
                 hasWinget = hasWinget,
-                hasChoco = hasChoco,
                 lastEnvironmentCheckedAtEpochMillis = System.currentTimeMillis()
             )
         }

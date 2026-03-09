@@ -68,13 +68,11 @@ class CommandRunner {
             onProcessStarted?.invoke(process)
 
             var firstLine: String? = null
+            val collected = StringBuilder()
 
             process.inputStream.bufferedReader().useLines { lines ->
                 lines.forEach { rawLine ->
-                    val line = rawLine
-                        .replace("\r", "")
-                        .trimEnd()
-
+                    val line = rawLine.replace("\r", "").trimEnd()
                     if (line.isBlank()) return@forEach
 
                     val progressText = extractProgressDisplayText(line)
@@ -87,6 +85,7 @@ class CommandRunner {
                         firstLine = line
                     }
 
+                    collected.appendLine(line)
                     onLine(line)
                 }
             }
@@ -97,11 +96,10 @@ class CommandRunner {
                 success = exitCode == 0,
                 exitCode = exitCode,
                 firstLine = firstLine,
-                fullOutput = ""
+                fullOutput = collected.toString()
             )
         } catch (e: Exception) {
             onLine("명령 실행 실패: ${e.message ?: "원인 불명"}")
-
             CommandResult(
                 success = false,
                 exitCode = -1,

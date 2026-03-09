@@ -4,6 +4,7 @@ import app.linkdock.desktop.app.AppUiState
 import app.linkdock.desktop.command.CommandRunner
 import app.linkdock.desktop.domain.OsType
 import app.linkdock.desktop.platform.PlatformResolver
+import app.linkdock.desktop.command.CommandResult
 
 class StreamlinkInstaller(
     private val platformResolver: PlatformResolver,
@@ -126,67 +127,53 @@ class StreamlinkInstaller(
             )
 
             onProgressLine(null)
-
-            return if (result.success) {
-                InstallationResult(
-                    success = true,
-                    completionMessage = if (state.hasStreamlink) {
-                        "WinGet으로 Streamlink 업데이트 완료"
-                    } else {
-                        "WinGet으로 Streamlink 설치 완료"
-                    }
-                )
-            } else {
-                InstallationResult(
-                    success = false,
-                    completionMessage = if (state.hasStreamlink) {
-                        "WinGet 업데이트 실패"
-                    } else {
-                        "WinGet 설치 실패"
-                    }
-                )
-            }
-        }
-
-        if (state.hasChoco) {
-            val chocoExecutable =
-                platformResolver.findCommandPath(OsType.WINDOWS, "choco") ?: "choco"
-
-            val command = listOf(
-                chocoExecutable,
-                "upgrade",
-                "streamlink",
-                "-y"
-            )
-
-            onLine("Chocolatey로 Streamlink 설치/업데이트 중...")
-
-            val result = commandRunner.runStreamingCommand(
-                command = command,
-                onLine = onLine,
-                onProgressLine = { progressLine ->
-                    onProgressLine(progressLine)
-                }
-            )
-
-            onProgressLine(null)
-
-            return if (result.success) {
-                InstallationResult(
-                    success = true,
-                    completionMessage = "Chocolatey로 Streamlink 설치/업데이트 완료"
-                )
-            } else {
-                InstallationResult(
-                    success = false,
-                    completionMessage = "Chocolatey 설치/업데이트 실패"
-                )
-            }
+            return classifyWingetResult(state, result)
         }
 
         return InstallationResult(
             success = false,
-            completionMessage = "WinGet 또는 Chocolatey 없음"
+            completionMessage = "WinGet 없음"
+        )
+    }
+
+    private fun classifyWingetResult(
+        state: AppUiState,
+        result: CommandResult
+    ): InstallationResult {
+        val output = result.fullOutput.lowercase()
+
+        if (result.exitCode == 0) {
+            return InstallationResult(
+                success = true,
+                completionMessage = if (state.hasStreamlink) {
+                    "WinGet으로 Streamlink 업데이트 완료"
+                } else {
+                    "WinGet으로 Streamlink 설치 완료"
+                }
+            )
+        }
+
+        if (
+            state.hasStreamlink &&
+            (
+                    "no available upgrade found" in output ||
+                            "no newer package versions are available" in output ||
+                            "no applicable upgrade found" in output
+                    )
+        ) {
+            return InstallationResult(
+                success = true,
+                completionMessage = "WinGet 기준 Streamlink는 이미 최신 버전입니다."
+            )
+        }
+
+        return InstallationResult(
+            success = false,
+            completionMessage = if (state.hasStreamlink) {
+                "WinGet 업데이트 실패"
+            } else {
+                "WinGet 설치 실패"
+            }
         )
     }
 }

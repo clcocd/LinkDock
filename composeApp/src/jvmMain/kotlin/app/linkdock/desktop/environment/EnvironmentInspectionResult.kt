@@ -7,6 +7,5 @@ data class EnvironmentInspectionResult(
     val hasStreamlink: Boolean,
     val hasBrew: Boolean = false,
     val hasWinget: Boolean = false,
-    val hasChoco: Boolean = false,
     val logs: List<String>
 )

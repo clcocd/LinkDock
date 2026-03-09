@@ -28,7 +28,6 @@ data class AppUiState(
     val hasStreamlink: Boolean = false,
     val hasBrew: Boolean = false,
     val hasWinget: Boolean = false,
-    val hasChoco: Boolean = false,
 
     val lastEnvironmentCheckedAtEpochMillis: Long? = null,
 

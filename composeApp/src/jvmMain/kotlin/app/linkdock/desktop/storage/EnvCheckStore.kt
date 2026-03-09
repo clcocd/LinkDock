@@ -31,8 +31,7 @@ class EnvCheckStore(
                 osType = osType,
                 hasStreamlink = props.getProperty("hasStreamlink")?.toBoolean() ?: false,
                 hasBrew = props.getProperty("hasBrew")?.toBoolean() ?: false,
-                hasWinget = props.getProperty("hasWinget")?.toBoolean() ?: false,
-                hasChoco = props.getProperty("hasChoco")?.toBoolean() ?: false
+                hasWinget = props.getProperty("hasWinget")?.toBoolean() ?: false
             )
         } catch (_: Exception) {
             null
@@ -49,7 +48,6 @@ class EnvCheckStore(
                 setProperty("hasStreamlink", cache.hasStreamlink.toString())
                 setProperty("hasBrew", cache.hasBrew.toString())
                 setProperty("hasWinget", cache.hasWinget.toString())
-                setProperty("hasChoco", cache.hasChoco.toString())
             }
 
             Files.newOutputStream(filePath).use { props.store(it, null) }

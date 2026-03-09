@@ -70,10 +70,6 @@ class EnvironmentInspector(
         val winget = commandRunner.runCommandWithFallback("winget", wingetPath, "--version")
         appendToolStatus(logs, "WinGet", winget.success, winget.firstLine)
 
-        val chocoPath = platformResolver.findCommandPath(OsType.WINDOWS, "choco")
-        val choco = commandRunner.runCommandWithFallback("choco", chocoPath, "--version")
-        appendToolStatus(logs, "Chocolatey", choco.success, choco.firstLine)
-
         val streamlinkPath = platformResolver.findCommandPath(OsType.WINDOWS, "streamlink")
         val streamlink = commandRunner.runCommandWithFallback("streamlink", streamlinkPath, "--version")
         appendToolStatus(logs, "Streamlink", streamlink.success, streamlink.firstLine)
@@ -82,7 +78,6 @@ class EnvironmentInspector(
             osType = OsType.WINDOWS,
             hasStreamlink = streamlink.success,
             hasWinget = winget.success,
-            hasChoco = choco.success,
             logs = logs
         )
     }

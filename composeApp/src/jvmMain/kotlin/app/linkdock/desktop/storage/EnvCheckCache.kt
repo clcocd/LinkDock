@@ -7,6 +7,5 @@ data class EnvCheckCache(
     val osType: OsType,
     val hasStreamlink: Boolean,
     val hasBrew: Boolean,
-    val hasWinget: Boolean,
-    val hasChoco: Boolean
+    val hasWinget: Boolean
 )
