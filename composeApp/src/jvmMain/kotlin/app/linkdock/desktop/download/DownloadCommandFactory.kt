@@ -75,6 +75,7 @@ class DownloadCommandFactory(
         }
 
         command += "--progress=force"
+        command += "--skip"
         command += state.url
         command += state.quality
         command += listOf("-o", outputTemplate)

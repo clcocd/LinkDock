@@ -440,6 +440,7 @@ class AppController {
         scope.launch {
             downloadStopRequested = false
             currentDownloadProcess = null
+            var skippedBecauseFileExists = false
 
             startNewLogSession("다운로드 시작")
             appendLog("서비스: ${state.selectedService.displayName}")
@@ -458,6 +459,10 @@ class AppController {
             val result = commandRunner.runStreamingDownloadCommand(
                 command = command,
                 onStdoutLine = { line ->
+                    if (line.contains("already exists", ignoreCase = true)) {
+                        skippedBecauseFileExists = true
+                    }
+
                     val progress = StreamlinkProgressParser.parse(line)
 
                     if (progress != null) {
@@ -467,6 +472,9 @@ class AppController {
                     }
                 },
                 onStderrLine = { line ->
+                    if (line.contains("already exists", ignoreCase = true)) {
+                        skippedBecauseFileExists = true
+                    }
                     appendLog(line)
                 },
                 onProcessStarted = { process ->
@@ -489,6 +497,11 @@ class AppController {
                 stoppedByUser -> {
                     setStatus("다운로드 중지됨")
                     appendLog("다운로드 중지됨")
+                }
+
+                skippedBecauseFileExists -> {
+                    setStatus("이미 같은 파일이 있어 건너뜀")
+                    appendLog("이미 같은 파일이 있어 건너뜀")
                 }
 
                 result.success -> {
