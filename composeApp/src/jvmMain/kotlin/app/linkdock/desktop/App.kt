@@ -47,8 +47,6 @@ private val LightColors = lightColorScheme(
 
 @Composable
 fun App(
-    onExitApp: () -> Unit,
-    onRestartApp: () -> Boolean
 ) {
     val controller = remember { AppController() }
     val uiState by controller.uiState.collectAsState()
@@ -66,8 +64,6 @@ fun App(
     ) {
         MainScreen(
             controller = controller,
-            onExitApp = onExitApp,
-            onRestartApp = onRestartApp
         )
     }
 }

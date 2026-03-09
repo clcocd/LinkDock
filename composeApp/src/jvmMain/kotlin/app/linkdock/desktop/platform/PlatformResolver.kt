@@ -118,6 +118,8 @@ class PlatformResolver {
             )
 
             "streamlink" -> listOf(
+                "$localAppData\\Programs\\Streamlink\\bin\\streamlink.exe",
+                "$localAppData\\Streamlink\\bin\\streamlink.exe",
                 "$programData\\chocolatey\\bin\\streamlink.exe",
                 "$userProfile\\scoop\\shims\\streamlink.exe"
             )

@@ -17,8 +17,6 @@ private val TopPanelMinHeight = 120.dp
 @Composable
 fun MainScreen(
     controller: AppController,
-    onExitApp: () -> Unit,
-    onRestartApp: () -> Boolean,
     modifier: Modifier = Modifier
 ) {
     val uiState by controller.uiState.collectAsState()
@@ -75,40 +73,6 @@ fun MainScreen(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-
-    if (uiState.showRestartDialog) {
-        AlertDialog(
-            onDismissRequest = controller::dismissRestartDialog,
-            title = {
-                Text("다시 시작 필요")
-            },
-            text = {
-                Text(
-                    uiState.restartDialogMessage
-                        ?: "변경 사항을 반영하려면 앱을 다시 시작하는 것이 좋습니다."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        controller.confirmRestart(
-                            onRestartApp = onRestartApp,
-                            onExitApp = onExitApp
-                        )
-                    }
-                ) {
-                    Text("지금 다시 시작")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = controller::dismissRestartDialog
-                ) {
-                    Text("나중에")
-                }
-            }
-        )
     }
 }
 

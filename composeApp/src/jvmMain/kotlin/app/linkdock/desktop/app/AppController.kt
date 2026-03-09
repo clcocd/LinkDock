@@ -207,12 +207,14 @@ class AppController {
         runEnvironmentCheck(
             startNewSession = true,
             userInitiated = true
+
         )
     }
 
     private fun runEnvironmentCheck(
         startNewSession: Boolean,
-        userInitiated: Boolean
+        userInitiated: Boolean,
+        showPostInstallHint: Boolean = false
     ) {
         val state = _uiState.value
 
@@ -256,6 +258,16 @@ class AppController {
                     hasChoco = result.hasChoco
                 )
 
+                if (
+                    showPostInstallHint &&
+                    result.osType == OsType.WINDOWS &&
+                    !result.hasStreamlink
+                ) {
+                    appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
+                    appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
+                    setStatus("설치 완료, 앱 재실행 필요할 수 있음")
+                }
+
                 envCheckStore.save(
                     EnvCheckCache(
                         checkedAtEpochMillis = System.currentTimeMillis(),
@@ -274,7 +286,9 @@ class AppController {
                 }
 
                 if (userInitiated) {
-                    setStatus("환경 검사 완료")
+                    if (!(showPostInstallHint && result.osType == OsType.WINDOWS && !result.hasStreamlink)) {
+                        setStatus("환경 검사 완료")
+                    }
                     appendLog("환경 검사 완료")
                 } else {
                     appendLog("백그라운드 환경 확인 완료")
@@ -359,10 +373,6 @@ class AppController {
                     return@launch
                 }
 
-                streamlinkResult.restartRecommendationMessage?.let { message ->
-                    showRestartRecommendation(message)
-                }
-
                 appendLog("설치 / 업데이트 완료")
             } finally {
                 _uiState.update { current ->
@@ -373,10 +383,12 @@ class AppController {
                 }
             }
 
+            appendLogSection("설치 후 환경 다시 검사")
             setStatus("환경 다시 검사 중...")
             runEnvironmentCheck(
                 startNewSession = false,
-                userInitiated = true
+                userInitiated = true,
+                showPostInstallHint = true
             )
         }
     }
@@ -544,6 +556,14 @@ class AppController {
         }
     }
 
+    private fun appendLogSection(title: String) {
+        val hasLogs = _uiState.value.logs.isNotEmpty()
+        if (hasLogs) {
+            appendLog("")
+        }
+        appendLog("────────── $title ──────────")
+    }
+
     private fun startNewLogSession(title: String) {
         _uiState.update { current ->
             current.copy(logs = listOf(title))
@@ -580,51 +600,4 @@ class AppController {
             current.copy(downloadProgress = progress)
         }
     }
-
-    fun showRestartRecommendation(message: String) {
-        _uiState.update { current ->
-            current.copy(
-                showRestartDialog = true,
-                restartDialogMessage = message
-            )
-        }
-    }
-
-    fun dismissRestartDialog() {
-        _uiState.update { current ->
-            current.copy(
-                showRestartDialog = false,
-                restartDialogMessage = null
-            )
-        }
-    }
-
-    fun confirmRestart(
-        onRestartApp: () -> Boolean,
-        onExitApp: () -> Unit
-    ) {
-        appendLog("앱 다시 시작 요청")
-
-        val restartStarted = runCatching { onRestartApp() }.getOrDefault(false)
-
-        if (!restartStarted) {
-            appendLog("자동 재시작 실행에 실패했습니다.")
-            appendLog("앱을 직접 다시 실행해 주세요.")
-            setStatus("자동 재시작 실패")
-
-            _uiState.update { current ->
-                current.copy(
-                    restartDialogMessage =
-                        "자동으로 다시 시작하지 못했습니다.\n앱을 직접 종료한 뒤 다시 실행해 주세요."
-                )
-            }
-            return
-        }
-
-        appendLog("새 앱 인스턴스를 실행했습니다.")
-        appendLog("현재 앱을 종료합니다.")
-        dismissRestartDialog()
-        onExitApp()
-    }
-
 }

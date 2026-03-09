@@ -32,8 +32,6 @@ data class AppUiState(
 
     val lastEnvironmentCheckedAtEpochMillis: Long? = null,
 
-    val showRestartDialog: Boolean = false,
-    val restartDialogMessage: String? = null,
     val statusMessage: String = "대기 중",
     val logs: List<String> = listOf("LinkDock 시작됨")
 )
