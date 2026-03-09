@@ -18,6 +18,7 @@ private val TopPanelMinHeight = 120.dp
 fun MainScreen(
     controller: AppController,
     onExitApp: () -> Unit,
+    onRestartApp: () -> Boolean,
     modifier: Modifier = Modifier
 ) {
     val uiState by controller.uiState.collectAsState()
@@ -80,7 +81,7 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = controller::dismissRestartDialog,
             title = {
-                Text("재시작 권장")
+                Text("다시 시작 필요")
             },
             text = {
                 Text(
@@ -91,11 +92,13 @@ fun MainScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        controller.dismissRestartDialog()
-                        onExitApp()
+                        controller.confirmRestart(
+                            onRestartApp = onRestartApp,
+                            onExitApp = onExitApp
+                        )
                     }
                 ) {
-                    Text("지금 종료")
+                    Text("지금 다시 시작")
                 }
             },
             dismissButton = {

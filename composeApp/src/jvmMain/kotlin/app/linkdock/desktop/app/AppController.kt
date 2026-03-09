@@ -599,4 +599,32 @@ class AppController {
         }
     }
 
+    fun confirmRestart(
+        onRestartApp: () -> Boolean,
+        onExitApp: () -> Unit
+    ) {
+        appendLog("앱 다시 시작 요청")
+
+        val restartStarted = runCatching { onRestartApp() }.getOrDefault(false)
+
+        if (!restartStarted) {
+            appendLog("자동 재시작 실행에 실패했습니다.")
+            appendLog("앱을 직접 다시 실행해 주세요.")
+            setStatus("자동 재시작 실패")
+
+            _uiState.update { current ->
+                current.copy(
+                    restartDialogMessage =
+                        "자동으로 다시 시작하지 못했습니다.\n앱을 직접 종료한 뒤 다시 실행해 주세요."
+                )
+            }
+            return
+        }
+
+        appendLog("새 앱 인스턴스를 실행했습니다.")
+        appendLog("현재 앱을 종료합니다.")
+        dismissRestartDialog()
+        onExitApp()
+    }
+
 }

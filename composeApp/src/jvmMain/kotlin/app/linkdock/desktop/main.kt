@@ -7,9 +7,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.linkdock.desktop.app.AppInfo
+import app.linkdock.desktop.platform.AppRestarter
 import java.awt.Dimension
-
-
 
 fun main() = application {
 
@@ -28,7 +27,8 @@ fun main() = application {
         }
 
         App(
-            onExitApp = ::exitApplication
+            onExitApp = ::exitApplication,
+            onRestartApp = AppRestarter::restartCurrentApp
         )
     }
 }

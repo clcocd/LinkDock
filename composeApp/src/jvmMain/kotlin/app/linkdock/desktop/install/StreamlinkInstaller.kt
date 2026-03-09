@@ -137,8 +137,8 @@ class StreamlinkInstaller(
                     },
                     restartRecommendationMessage = if (!state.hasStreamlink) {
                         "Streamlink 설치가 완료되었습니다.\n" +
-                                "현재 앱 세션에서는 새 경로가 아직 반영되지 않았을 수 있습니다.\n" +
-                                "앱을 다시 시작하면 정상 인식될 가능성이 높습니다."
+                                "설치 내용을 현재 앱에 바로 반영하려면 앱을 다시 시작하는 편이 확실합니다.\n" +
+                                "[지금 다시 시작]을 누르면 앱이 자동으로 다시 실행됩니다."
                     } else {
                         null
                     }
@@ -184,8 +184,8 @@ class StreamlinkInstaller(
                     completionMessage = "Chocolatey로 Streamlink 설치/업데이트 완료",
                     restartRecommendationMessage = if (!state.hasStreamlink) {
                         "Streamlink 설치가 완료되었습니다.\n" +
-                                "현재 앱 세션에서는 새 경로가 아직 반영되지 않았을 수 있습니다.\n" +
-                                "앱을 다시 시작하면 정상 인식될 가능성이 높습니다."
+                                "설치 내용을 현재 앱에 바로 반영하려면 앱을 다시 시작하는 편이 확실합니다.\n" +
+                                "[지금 다시 시작]을 누르면 앱이 자동으로 다시 실행됩니다."
                     } else {
                         null
                     }
