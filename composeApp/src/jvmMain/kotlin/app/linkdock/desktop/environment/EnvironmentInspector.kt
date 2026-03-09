@@ -30,37 +30,37 @@ class EnvironmentInspector(
 
     private fun inspectMac(logs: MutableList<String>): EnvironmentInspectionResult {
         val streamlinkPath = platformResolver.findCommandPath(OsType.MAC, "streamlink")
-        val streamlink = if (streamlinkPath != null) {
-            commandRunner.runCommand(streamlinkPath, "--version")
-        } else {
-            null
-        }
+        val streamlink = commandRunner.runCommandWithFallback(
+            commandName = "streamlink",
+            streamlinkPath,
+            "--version"
+        )
 
         appendToolStatus(
             logs = logs,
             label = "Streamlink",
-            success = streamlink?.success == true,
-            firstLine = streamlink?.firstLine
+            success = streamlink.success,
+            firstLine = streamlink.firstLine
         )
 
         val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
-        val brew = if (brewPath != null) {
-            commandRunner.runCommand(brewPath, "--version")
-        } else {
-            null
-        }
+        val brew = commandRunner.runCommandWithFallback(
+            commandName = "brew",
+            brewPath,
+            "--version"
+        )
 
         appendToolStatus(
             logs = logs,
             label = "Homebrew",
-            success = brew?.success == true,
-            firstLine = brew?.firstLine
+            success = brew.success,
+            firstLine = brew.firstLine
         )
 
         return EnvironmentInspectionResult(
             osType = OsType.MAC,
-            hasStreamlink = streamlink?.success == true,
-            hasBrew = brew?.success == true,
+            hasStreamlink = streamlink.success,
+            hasBrew = brew.success,
             logs = logs
         )
     }
@@ -88,10 +88,10 @@ class EnvironmentInspector(
         success: Boolean,
         firstLine: String?
     ) {
-        if (success) {
-            logs += formatInstalledToolLine(label, firstLine)
+        logs += if (success) {
+            formatInstalledToolLine(label, firstLine)
         } else {
-            logs += "$label 없음"
+            "$label 없음"
         }
     }
 

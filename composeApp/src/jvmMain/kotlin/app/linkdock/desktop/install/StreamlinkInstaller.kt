@@ -28,44 +28,65 @@ class StreamlinkInstaller(
         }
     }
 
+    private fun actionWord(state: AppUiState): String {
+        return if (state.hasStreamlink) "업데이트" else "설치"
+    }
+
+    private fun runPackageManagerCommand(
+        startLabel: String,
+        state: AppUiState,
+        command: List<String>,
+        onLine: (String) -> Unit,
+        onProgressLine: (String?) -> Unit,
+        classifier: (AppUiState, CommandResult) -> InstallationResult
+    ): InstallationResult {
+        onLine("$startLabel Streamlink ${actionWord(state)} 중...")
+
+        val result = commandRunner.runStreamingCommand(
+            command = command,
+            onLine = onLine,
+            onProgressLine = onProgressLine
+        )
+
+        onProgressLine(null)
+        return classifier(state, result)
+    }
+
     private fun installOrUpdateOnMac(
         state: AppUiState,
         onLine: (String) -> Unit,
         onProgressLine: (String?) -> Unit
     ): InstallationResult {
-        val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
-        if (brewPath == null) {
+        val preferredBrewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
+        val brewProbe = commandRunner.runCommandWithFallback(
+            commandName = "brew",
+            preferredBrewPath,
+            "--version"
+        )
+
+        if (!brewProbe.success) {
             return InstallationResult(
                 success = false,
                 completionMessage = "Homebrew 없음"
             )
         }
 
+        val brewExecutable = preferredBrewPath ?: "brew"
+
         val command = if (state.hasStreamlink) {
-            listOf(brewPath, "upgrade", "streamlink")
+            listOf(brewExecutable, "upgrade", "streamlink")
         } else {
-            listOf(brewPath, "install", "streamlink")
+            listOf(brewExecutable, "install", "streamlink")
         }
 
-        onLine(
-            if (state.hasStreamlink) {
-                "Homebrew로 Streamlink 업데이트 중..."
-            } else {
-                "Homebrew로 Streamlink 설치 중..."
-            }
-        )
-
-        val result = commandRunner.runStreamingCommand(
+        return runPackageManagerCommand(
+            startLabel = "Homebrew로",
+            state = state,
             command = command,
             onLine = onLine,
-            onProgressLine = { progressLine ->
-                onProgressLine(progressLine)
-            }
+            onProgressLine = onProgressLine,
+            classifier = ::classifyBrewResult
         )
-
-        onProgressLine(null)
-        return classifyBrewResult(state, result)
-
     }
 
     private fun classifyBrewResult(
@@ -114,48 +135,38 @@ class StreamlinkInstaller(
         onLine: (String) -> Unit,
         onProgressLine: (String?) -> Unit
     ): InstallationResult {
-        if (state.hasWinget) {
-            val wingetExecutable =
-                platformResolver.findCommandPath(OsType.WINDOWS, "winget") ?: "winget"
-
-            val commonArgs = listOf(
-                "-e",
-                "--id", "Streamlink.Streamlink",
-                "--source", "winget",
-                "--accept-source-agreements",
-                "--accept-package-agreements",
-                "--disable-interactivity"
+        if (!state.hasWinget) {
+            return InstallationResult(
+                success = false,
+                completionMessage = "WinGet 없음"
             )
-
-            val command = if (state.hasStreamlink) {
-                listOf(wingetExecutable, "upgrade") + commonArgs
-            } else {
-                listOf(wingetExecutable, "install") + commonArgs
-            }
-
-            onLine(
-                if (state.hasStreamlink) {
-                    "WinGet으로 Streamlink 업데이트 중..."
-                } else {
-                    "WinGet으로 Streamlink 설치 중..."
-                }
-            )
-
-            val result = commandRunner.runStreamingCommand(
-                command = command,
-                onLine = onLine,
-                onProgressLine = { progressLine ->
-                    onProgressLine(progressLine)
-                }
-            )
-
-            onProgressLine(null)
-            return classifyWingetResult(state, result)
         }
 
-        return InstallationResult(
-            success = false,
-            completionMessage = "WinGet 없음"
+        val wingetExecutable =
+            platformResolver.findCommandPath(OsType.WINDOWS, "winget") ?: "winget"
+
+        val commonArgs = listOf(
+            "-e",
+            "--id", "Streamlink.Streamlink",
+            "--source", "winget",
+            "--accept-source-agreements",
+            "--accept-package-agreements",
+            "--disable-interactivity"
+        )
+
+        val command = if (state.hasStreamlink) {
+            listOf(wingetExecutable, "upgrade") + commonArgs
+        } else {
+            listOf(wingetExecutable, "install") + commonArgs
+        }
+
+        return runPackageManagerCommand(
+            startLabel = "WinGet으로",
+            state = state,
+            command = command,
+            onLine = onLine,
+            onProgressLine = onProgressLine,
+            classifier = ::classifyWingetResult
         )
     }
 
