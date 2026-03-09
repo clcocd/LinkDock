@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 class AppController {
 
@@ -290,9 +291,11 @@ class AppController {
                     setStatus("설치 확인 완료")
                     appendLog("설치 확인 완료")
                 }
-            } catch (t: Throwable) {
-                val errorMessage = t.message?.takeIf { it.isNotBlank() }
-                    ?: t::class.simpleName
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val errorMessage = e.message?.takeIf { it.isNotBlank() }
+                    ?: e::class.simpleName
                     ?: "알 수 없는 오류"
 
                 if (userInitiated) {
