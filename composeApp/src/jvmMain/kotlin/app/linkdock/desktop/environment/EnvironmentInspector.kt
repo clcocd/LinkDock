@@ -31,7 +31,7 @@ class EnvironmentInspector(
     private fun inspectMac(logs: MutableList<String>): EnvironmentInspectionResult {
         val streamlinkPath = platformResolver.findCommandPath(OsType.MAC, "streamlink")
         val streamlink = commandRunner.runCommandWithFallback(
-            commandName = "streamlink",
+            "streamlink",
             streamlinkPath,
             "--version"
         )
@@ -45,7 +45,7 @@ class EnvironmentInspector(
 
         val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
         val brew = commandRunner.runCommandWithFallback(
-            commandName = "brew",
+            "brew",
             brewPath,
             "--version"
         )
