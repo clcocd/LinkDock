@@ -198,13 +198,7 @@ private fun ActionCard(
                     enabled = canRunEnvironmentCheck,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        when {
-                            uiState.isCheckingEnvironment -> "확인 중"
-                            uiState.isRefreshingEnvironment -> "자동 확인 중"
-                            else -> "환경 다시 확인"
-                        }
-                    )
+                    Text("설치 확인")
                 }
 
                 Button(
