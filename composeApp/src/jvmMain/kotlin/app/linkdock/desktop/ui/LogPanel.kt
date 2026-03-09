@@ -69,11 +69,13 @@ fun LogPanel(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Text(
-                    text = environmentHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (!environmentHint.isNullOrBlank()) {
+                    Text(
+                        text = environmentHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 val progressText = when {
                     uiState.downloadProgress != null -> uiState.downloadProgress.toDisplayText()
@@ -138,9 +140,15 @@ fun LogPanel(
     }
 }
 
-private fun buildEnvironmentHint(uiState: AppUiState): String = when (uiState.osType) {
-    null -> "환경 상태: 아직 검사하지 않음"
-    OsType.UNSUPPORTED -> "환경 상태: 지원하지 않는 운영체제"
-    OsType.MAC, OsType.WINDOWS ->
-        if (uiState.hasStreamlink) "Streamlink 설치됨" else "Streamlink 미설치"
+private fun buildEnvironmentHint(uiState: AppUiState): String? {
+    if (uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment) {
+        return null
+    }
+
+    return when (uiState.osType) {
+        null -> "환경 상태: 아직 검사하지 않음"
+        OsType.UNSUPPORTED -> "환경 상태: 지원하지 않는 운영체제"
+        OsType.MAC, OsType.WINDOWS ->
+            if (uiState.hasStreamlink) "Streamlink 설치됨" else "Streamlink 미설치"
+    }
 }
