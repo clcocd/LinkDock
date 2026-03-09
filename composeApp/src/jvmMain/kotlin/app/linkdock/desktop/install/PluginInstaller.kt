@@ -54,7 +54,7 @@ class PluginInstaller(
             val backupFile = File(pluginDir, "${asset.fileName}.bak")
 
             try {
-                onLine("${asset.fileName} 다운로드 시작")
+
                 downloadToFile(asset.downloadUrl, tempFile)
 
                 if (!tempFile.isFile || tempFile.length() == 0L) {
@@ -67,19 +67,20 @@ class PluginInstaller(
 
                 if (targetFile.isFile && filesHaveSameContent(targetFile, tempFile)) {
                     tempFile.delete()
-                    onLine("변경 없음, 건너뜀: ${asset.fileName}")
+                    onLine("${asset.fileName} 변경 없음, 유지")
                     continue
                 }
 
                 if (targetFile.isFile) {
+                    onLine("${asset.fileName} 변경 감지")
                     targetFile.copyTo(backupFile, overwrite = true)
-                    onLine("기존 파일 백업: ${backupFile.name}")
                 }
 
                 tempFile.copyTo(targetFile, overwrite = true)
                 tempFile.delete()
 
-                onLine("플러그인 갱신 완료: ${asset.fileName}")
+                onLine("${asset.fileName} 업데이트 적용 완료")
+
             } catch (e: Exception) {
                 tempFile.delete()
                 return PluginInstallResult(
