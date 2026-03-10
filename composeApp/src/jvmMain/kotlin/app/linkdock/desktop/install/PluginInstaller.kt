@@ -58,13 +58,14 @@ class PluginInstaller(
             val targetFile = File(pluginDir, asset.fileName)
             val tempFile = File(pluginDir, "${asset.fileName}.tmp")
             val backupFile = File(pluginDir, "${asset.fileName}.bak")
+            var backupCreated = false
 
             try {
+                tempFile.delete()
 
                 downloadToFile(asset.downloadUrl, tempFile)
 
                 if (!tempFile.isFile || tempFile.length() == 0L) {
-                    tempFile.delete()
                     return PluginInstallResult(
                         success = false,
                         completionMessage = "${asset.fileName} 다운로드 결과가 비어 있습니다."
@@ -72,7 +73,6 @@ class PluginInstaller(
                 }
 
                 if (targetFile.isFile && filesHaveSameContent(targetFile, tempFile)) {
-                    tempFile.delete()
                     onLine("${asset.fileName} 변경 없음, 유지")
                     continue
                 }
@@ -80,19 +80,36 @@ class PluginInstaller(
                 if (targetFile.isFile) {
                     onLine("${asset.fileName} 변경 감지")
                     targetFile.copyTo(backupFile, overwrite = true)
+                    backupCreated = true
                 }
 
                 tempFile.copyTo(targetFile, overwrite = true)
-                tempFile.delete()
+
+                if (backupFile.isFile) {
+                    backupFile.delete()
+                }
 
                 onLine("${asset.fileName} 업데이트 적용 완료")
-
             } catch (e: Exception) {
-                tempFile.delete()
+                val restoreMessage = if (backupCreated && backupFile.isFile) {
+                    try {
+                        backupFile.copyTo(targetFile, overwrite = true)
+                        onLine("${asset.fileName} 복구 완료")
+                        "\n백업에서 기존 파일을 복구했습니다: ${targetFile.absolutePath}"
+                    } catch (restoreError: Exception) {
+                        "\n백업 복구에도 실패했습니다: ${restoreError.message ?: "원인 불명"}" +
+                                "\n백업 파일 위치: ${backupFile.absolutePath}"
+                    }
+                } else {
+                    ""
+                }
+
                 return PluginInstallResult(
                     success = false,
-                    completionMessage = "${asset.fileName} 설치 실패: ${e.message ?: "원인 불명"}"
+                    completionMessage = "${asset.fileName} 설치 실패: ${e.message ?: "원인 불명"}$restoreMessage"
                 )
+            } finally {
+                tempFile.delete()
             }
         }
 
