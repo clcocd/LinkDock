@@ -479,7 +479,7 @@ class AppController {
                     return@launch
                 }
 
-                shouldRunPostInstallCheck = streamlinkResult.didChangeStreamlink
+                shouldRunPostInstallCheck = true
 
                 setInstallProgressText(null)
                 setStatus("플러그인 설치/업데이트 중...")
