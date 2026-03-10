@@ -402,14 +402,12 @@ class AppController {
                     setStatus("설치 확인 완료")
                     appendLog("설치 확인 완료")
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 val errorMessage = e.message?.takeIf { it.isNotBlank() }
                     ?: e::class.simpleName
                     ?: "알 수 없는 오류"
 
-                if (userInitiated) {
+                if (userInitiated || showPostInstallHint) {
                     appendLog("설치 확인 중 오류 발생: $errorMessage")
                 }
 
@@ -417,9 +415,10 @@ class AppController {
                     _uiState.update { current ->
                         current.copy(postInstallState = PostInstallState.NEEDS_RECHECK)
                     }
+                    setStatus("설치 후 다시 확인 필요")
+                } else if (userInitiated) {
+                    setStatus("설치 확인 실패")
                 }
-
-                setStatus("설치 확인 실패")
             } finally {
                 _uiState.update { current ->
                     if (userInitiated) {
