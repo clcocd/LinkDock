@@ -88,7 +88,12 @@ class PlatformResolver {
     fun ensureDirectoryExists(path: String): Boolean {
         return runCatching {
             val dir = File(path)
-            dir.exists() || dir.mkdirs()
+
+            when {
+                dir.exists() -> dir.isDirectory
+                dir.mkdirs() -> dir.isDirectory
+                else -> false
+            }
         }.getOrDefault(false)
     }
 

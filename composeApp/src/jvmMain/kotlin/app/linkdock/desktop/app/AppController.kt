@@ -88,13 +88,7 @@ class AppController {
 
     private fun startBackgroundEnvironmentRefresh() {
         scope.launch {
-            repeat(3) { attempt ->
-                if (attempt == 0) {
-                    delay(400)
-                } else {
-                    delay(800)
-                }
-
+            while (true) {
                 val state = _uiState.value
                 val busy =
                     state.isDownloading ||
@@ -110,6 +104,8 @@ class AppController {
                     )
                     return@launch
                 }
+
+                delay(1000)
             }
         }
     }
