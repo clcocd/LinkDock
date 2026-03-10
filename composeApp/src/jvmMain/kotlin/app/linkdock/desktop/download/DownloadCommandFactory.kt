@@ -31,13 +31,6 @@ class DownloadCommandFactory(
                 errorMessage = "플러그인 폴더 경로를 결정할 수 없습니다."
             )
 
-        if (!platformResolver.ensureDirectoryExists(pluginDir)) {
-            return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = "플러그인 폴더를 생성할 수 없습니다: $pluginDir"
-            )
-        }
-
         val selectedPluginFile = platformResolver.resolveManagedPluginFile(osType, selectedService)
             ?.let(::File)
             ?: return DownloadCommandBuildResult(
@@ -49,8 +42,11 @@ class DownloadCommandFactory(
             return DownloadCommandBuildResult(
                 command = null,
                 errorMessage = when (selectedService) {
-                    ServiceType.ZAN -> "ZAN 플러그인이 설치되어 있지 않습니다. 먼저 Streamlink 설치/업데이트를 실행하세요."
-                    ServiceType.SPWN -> "SPWN 플러그인이 설치되어 있지 않습니다. 먼저 Streamlink 설치/업데이트를 실행하세요."
+                    ServiceType.ZAN ->
+                        "ZAN 플러그인 파일이 없습니다: ${selectedPluginFile.absolutePath}\n먼저 Streamlink 설치/업데이트를 실행하세요."
+
+                    ServiceType.SPWN ->
+                        "SPWN 플러그인 파일이 없습니다: ${selectedPluginFile.absolutePath}\n먼저 Streamlink 설치/업데이트를 실행하세요."
                 }
             )
         }

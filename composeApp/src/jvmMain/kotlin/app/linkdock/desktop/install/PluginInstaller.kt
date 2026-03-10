@@ -48,7 +48,8 @@ class PluginInstaller(
         if (!platformResolver.ensureDirectoryExists(pluginDir)) {
             return PluginInstallResult(
                 success = false,
-                completionMessage = "플러그인 폴더를 생성할 수 없습니다: $pluginDir"
+                completionMessage = "플러그인 폴더를 생성할 수 없습니다: $pluginDir" +
+                        "\n해당 경로를 수동으로 생성한 뒤 다시 설치/업데이트를 실행해 주세요."
             )
         }
         onLine("플러그인 폴더 확인: $pluginDir")
