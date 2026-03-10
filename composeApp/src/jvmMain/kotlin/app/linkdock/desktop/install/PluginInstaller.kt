@@ -45,7 +45,12 @@ class PluginInstaller(
                 completionMessage = "플러그인 폴더 경로를 결정할 수 없습니다."
             )
 
-        platformResolver.ensureDirectoryExists(pluginDir)
+        if (!platformResolver.ensureDirectoryExists(pluginDir)) {
+            return PluginInstallResult(
+                success = false,
+                completionMessage = "플러그인 폴더를 생성할 수 없습니다: $pluginDir"
+            )
+        }
         onLine("플러그인 폴더 확인: $pluginDir")
 
         for (asset in pluginAssets) {

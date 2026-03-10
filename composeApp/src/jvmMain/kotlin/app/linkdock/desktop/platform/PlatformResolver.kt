@@ -85,8 +85,11 @@ class PlatformResolver {
         return if (home.isBlank()) "." else "$home${File.separator}Downloads"
     }
 
-    fun ensureDirectoryExists(path: String) {
-        File(path).mkdirs()
+    fun ensureDirectoryExists(path: String): Boolean {
+        return runCatching {
+            val dir = File(path)
+            dir.exists() || dir.mkdirs()
+        }.getOrDefault(false)
     }
 
     fun findMacCommandPath(commandName: String): String? {

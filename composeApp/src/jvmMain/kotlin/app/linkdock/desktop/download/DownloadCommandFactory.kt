@@ -31,7 +31,12 @@ class DownloadCommandFactory(
                 errorMessage = "플러그인 폴더 경로를 결정할 수 없습니다."
             )
 
-        platformResolver.ensureDirectoryExists(pluginDir)
+        if (!platformResolver.ensureDirectoryExists(pluginDir)) {
+            return DownloadCommandBuildResult(
+                command = null,
+                errorMessage = "플러그인 폴더를 생성할 수 없습니다: $pluginDir"
+            )
+        }
 
         val selectedPluginFile = platformResolver.resolveManagedPluginFile(osType, selectedService)
             ?.let(::File)
@@ -51,7 +56,14 @@ class DownloadCommandFactory(
         }
 
         val outputDir = platformResolver.resolveOutputDir(state.outputDir)
-        platformResolver.ensureDirectoryExists(outputDir)
+
+        if (!platformResolver.ensureDirectoryExists(outputDir)) {
+            return DownloadCommandBuildResult(
+                command = null,
+                resolvedOutputDir = outputDir,
+                errorMessage = "저장 폴더를 생성할 수 없습니다: $outputDir"
+            )
+        }
 
         val outputTemplate = when (selectedService) {
             ServiceType.ZAN -> File(outputDir, "{title}.mp4").path
