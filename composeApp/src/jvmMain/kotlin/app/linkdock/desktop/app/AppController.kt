@@ -402,6 +402,8 @@ class AppController {
                     setStatus("설치 확인 완료")
                     appendLog("설치 확인 완료")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val errorMessage = e.message?.takeIf { it.isNotBlank() }
                     ?: e::class.simpleName
