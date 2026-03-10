@@ -1,31 +1,15 @@
 package app.linkdock.desktop.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import app.linkdock.desktop.app.AppController
-import app.linkdock.desktop.app.AppUiState
+import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
-import app.linkdock.desktop.app.EnvironmentSource
-import app.linkdock.desktop.app.PostInstallState
 
 @Composable
 fun DownloadForm(
@@ -78,6 +62,10 @@ private fun InputCard(
     uiState: AppUiState,
     canEditFields: Boolean
 ) {
+    val emailHangulRejected = uiState.hangulRejectedField == HangulRejectedField.EMAIL
+    val passwordHangulRejected = uiState.hangulRejectedField == HangulRejectedField.PASSWORD
+    val urlHangulRejected = uiState.hangulRejectedField == HangulRejectedField.URL
+
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(
@@ -106,20 +94,38 @@ private fun InputCard(
                 OutlinedTextField(
                     value = uiState.email,
                     onValueChange = controller::updateEmail,
-                    label = { Text("이메일") },
+                    label = {
+                        Text(
+                            if (emailHangulRejected) {
+                                "이메일에는 한글을 사용할 수 없습니다."
+                            } else {
+                                "이메일"
+                            }
+                        )
+                    },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    enabled = canEditFields
+                    enabled = canEditFields,
+                    isError = emailHangulRejected
                 )
 
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = controller::updatePassword,
-                    label = { Text("비밀번호") },
+                    label = {
+                        Text(
+                            if (passwordHangulRejected) {
+                                "비밀번호에는 한글을 사용할 수 없습니다."
+                            } else {
+                                "비밀번호"
+                            }
+                        )
+                    },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = passwordHangulRejected
                 )
             }
 
@@ -132,12 +138,17 @@ private fun InputCard(
                     onValueChange = controller::updateUrl,
                     label = {
                         Text(
-                            uiState.selectedService?.let { "${it.displayName} URL" } ?: "서비스 URL"
+                            if (urlHangulRejected) {
+                                "URL에는 한글을 사용할 수 없습니다."
+                            } else {
+                                uiState.selectedService?.let { "${it.displayName} URL" } ?: "서비스 URL"
+                            }
                         )
                     },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    enabled = canEditFields
+                    enabled = canEditFields,
+                    isError = urlHangulRejected
                 )
 
                 OutlinedTextField(

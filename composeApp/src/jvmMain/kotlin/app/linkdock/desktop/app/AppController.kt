@@ -73,6 +73,19 @@ class AppController {
         return value.replace(Regex("[ㄱ-ㅎㅏ-ㅣ가-힣]"), "")
     }
 
+    private fun resolveHangulRejectedField(
+        current: AppUiState,
+        field: HangulRejectedField,
+        original: String,
+        sanitized: String
+    ): HangulRejectedField? {
+        return when {
+            sanitized != original -> field
+            current.hangulRejectedField == field -> null
+            else -> current.hangulRejectedField
+        }
+    }
+
     private fun restoreCachedEnvironmentState() {
         val cache = envCheckStore.load() ?: return
 
@@ -184,25 +197,52 @@ class AppController {
     fun updateEmail(value: String) {
         if (isInputLocked()) return
 
+        val current = _uiState.value
         val sanitized = removeHangul(value)
 
-        _uiState.value = _uiState.value.copy(email = sanitized)
+        _uiState.value = current.copy(
+            email = sanitized,
+            hangulRejectedField = resolveHangulRejectedField(
+                current = current,
+                field = HangulRejectedField.EMAIL,
+                original = value,
+                sanitized = sanitized
+            )
+        )
     }
 
     fun updatePassword(value: String) {
         if (isInputLocked()) return
 
+        val current = _uiState.value
         val sanitized = removeHangul(value)
 
-        _uiState.value = _uiState.value.copy(password = sanitized)
+        _uiState.value = current.copy(
+            password = sanitized,
+            hangulRejectedField = resolveHangulRejectedField(
+                current = current,
+                field = HangulRejectedField.PASSWORD,
+                original = value,
+                sanitized = sanitized
+            )
+        )
     }
 
     fun updateUrl(value: String) {
         if (isInputLocked()) return
 
+        val current = _uiState.value
         val sanitized = removeHangul(value)
 
-        _uiState.value = _uiState.value.copy(url = sanitized)
+        _uiState.value = current.copy(
+            url = sanitized,
+            hangulRejectedField = resolveHangulRejectedField(
+                current = current,
+                field = HangulRejectedField.URL,
+                original = value,
+                sanitized = sanitized
+            )
+        )
     }
 
     fun updateOutputDir(value: String) {

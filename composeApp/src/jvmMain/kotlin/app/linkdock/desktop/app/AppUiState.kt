@@ -18,12 +18,19 @@ enum class PostInstallState {
     MAY_NEED_RESTART
 }
 
+enum class HangulRejectedField {
+    EMAIL,
+    PASSWORD,
+    URL
+}
+
 data class AppUiState(
 
     val selectedService: ServiceType? = null,
     val email: String = "",
     val password: String = "",
     val url: String = "",
+    val hangulRejectedField: HangulRejectedField? = null,
     val outputDir: String = "",
     val quality: String = "best",
     val isDownloading: Boolean = false,
