@@ -52,6 +52,11 @@ class AppController {
 
     private var backgroundEnvironmentRefreshJob: Job? = null
 
+    private var environmentCheckJob: Job? = null
+
+    @Volatile
+    private var environmentCheckJobUserInitiated: Boolean = false
+
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
@@ -107,11 +112,14 @@ class AppController {
         backgroundEnvironmentRefreshJob = scope.launch {
             while (isActive) {
                 val state = _uiState.value
+                val environmentCheckRunning = environmentCheckJob?.isActive == true
+
                 val busy =
                     state.isDownloading ||
                             state.isInstalling ||
                             state.isCheckingEnvironment ||
-                            state.isRefreshingEnvironment
+                            state.isRefreshingEnvironment ||
+                            environmentCheckRunning
 
                 if (!busy) {
                     runEnvironmentCheck(
@@ -269,25 +277,41 @@ class AppController {
         showPostInstallHint: Boolean = false,
         silentIfBusy: Boolean = false
     ) {
-        val state = _uiState.value
+        val previousEnvironmentCheckJob = environmentCheckJob
+        val previousEnvironmentCheckJobUserInitiated = environmentCheckJobUserInitiated
 
-        val busy =
-            state.isDownloading ||
-                    state.isInstalling ||
-                    state.isCheckingEnvironment ||
-                    (!userInitiated && state.isRefreshingEnvironment)
-
-        if (busy) {
-            if (!silentIfBusy) {
-                appendLog("작업 중에는 설치 확인을 실행하지 않습니다.")
-            }
-            return
-        }
-
-        scope.launch {
+        val job = scope.launch {
             if (userInitiated) {
                 backgroundEnvironmentRefreshJob?.cancelAndJoin()
                 backgroundEnvironmentRefreshJob = null
+
+                if (
+                    previousEnvironmentCheckJob != null &&
+                    previousEnvironmentCheckJob.isActive &&
+                    !previousEnvironmentCheckJobUserInitiated
+                ) {
+                    previousEnvironmentCheckJob.cancelAndJoin()
+                }
+            }
+
+            val state = _uiState.value
+            val anotherEnvironmentCheckRunning =
+                previousEnvironmentCheckJob != null &&
+                        previousEnvironmentCheckJob.isActive &&
+                        previousEnvironmentCheckJob !== coroutineContext[Job]
+
+            val busy =
+                state.isDownloading ||
+                        state.isInstalling ||
+                        state.isCheckingEnvironment ||
+                        state.isRefreshingEnvironment ||
+                        anotherEnvironmentCheckRunning
+
+            if (busy) {
+                if (!silentIfBusy) {
+                    appendLog("작업 중에는 설치 확인을 실행하지 않습니다.")
+                }
+                return@launch
             }
 
             _uiState.update { current ->
@@ -404,8 +428,15 @@ class AppController {
                         current.copy(isRefreshingEnvironment = false)
                     }
                 }
+
+                if (environmentCheckJob === coroutineContext[Job]) {
+                    environmentCheckJob = null
+                }
             }
         }
+
+        environmentCheckJobUserInitiated = userInitiated
+        environmentCheckJob = job
     }
 
     fun installOrUpdateStreamlink() {
