@@ -460,6 +460,7 @@ class AppController {
             }
 
             var shouldRunPostInstallCheck: Boolean
+            var shouldRunSilentEnvironmentRefresh = false
 
             try {
                 val streamlinkResult = streamlinkInstaller.installOrUpdate(
@@ -496,27 +497,27 @@ class AppController {
 
                 if (!pluginResult.success) {
                     setStatus(pluginResult.completionMessage)
-                    return@launch
+                    shouldRunSilentEnvironmentRefresh = true
+                } else {
+                    val finalStatus = when (streamlinkResult.outcome) {
+                        InstallationOutcome.INSTALLED ->
+                            "Streamlink 설치 및 플러그인 설치/업데이트 완료"
+
+                        InstallationOutcome.UPDATED ->
+                            "Streamlink 업데이트 및 플러그인 설치/업데이트 완료"
+
+                        InstallationOutcome.ALREADY_LATEST ->
+                            "Streamlink는 이미 최신 상태이며 플러그인 설치/업데이트가 완료되었습니다."
+
+                        InstallationOutcome.PREREQUISITE_MISSING,
+                        InstallationOutcome.UNSUPPORTED_OS,
+                        InstallationOutcome.FAILED ->
+                            streamlinkResult.completionMessage
+                    }
+
+                    appendLog(finalStatus)
+                    setStatus(finalStatus)
                 }
-
-                val finalStatus = when (streamlinkResult.outcome) {
-                    InstallationOutcome.INSTALLED ->
-                        "Streamlink 설치 및 플러그인 설치/업데이트 완료"
-
-                    InstallationOutcome.UPDATED ->
-                        "Streamlink 업데이트 및 플러그인 설치/업데이트 완료"
-
-                    InstallationOutcome.ALREADY_LATEST ->
-                        "Streamlink는 이미 최신 상태이며 플러그인 설치/업데이트가 완료되었습니다."
-
-                    InstallationOutcome.PREREQUISITE_MISSING,
-                    InstallationOutcome.UNSUPPORTED_OS,
-                    InstallationOutcome.FAILED ->
-                        streamlinkResult.completionMessage
-                }
-
-                appendLog(finalStatus)
-                setStatus(finalStatus)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -527,6 +528,7 @@ class AppController {
                 appendLog("설치/업데이트 중 오류 발생: $errorMessage")
                 setStatus("설치/업데이트 실패")
                 shouldRunPostInstallCheck = false
+                shouldRunSilentEnvironmentRefresh = false
             } finally {
                 _uiState.update { current ->
                     current.copy(
@@ -537,17 +539,27 @@ class AppController {
             }
 
             if (shouldRunPostInstallCheck) {
-                _uiState.update { current ->
-                    current.copy(postInstallState = PostInstallState.VERIFYING)
-                }
+                if (shouldRunSilentEnvironmentRefresh) {
+                    appendLog("플러그인 설치/업데이트는 실패했지만 Streamlink 상태는 다시 확인합니다.")
+                    runEnvironmentCheck(
+                        startNewSession = false,
+                        userInitiated = false,
+                        showPostInstallHint = false,
+                        silentIfBusy = true
+                    )
+                } else {
+                    _uiState.update { current ->
+                        current.copy(postInstallState = PostInstallState.VERIFYING)
+                    }
 
-                appendLogSection("설치 다시 확인")
-                setStatus("설치 반영 확인 중...")
-                runEnvironmentCheck(
-                    startNewSession = false,
-                    userInitiated = true,
-                    showPostInstallHint = true
-                )
+                    appendLogSection("설치 다시 확인")
+                    setStatus("설치 반영 확인 중...")
+                    runEnvironmentCheck(
+                        startNewSession = false,
+                        userInitiated = true,
+                        showPostInstallHint = true
+                    )
+                }
             }
         }
     }
