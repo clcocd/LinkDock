@@ -88,12 +88,29 @@ class AppController {
 
     private fun startBackgroundEnvironmentRefresh() {
         scope.launch {
-            delay(400)
-            runEnvironmentCheck(
-                startNewSession = false,
-                userInitiated = false,
-                silentIfBusy = true
-            )
+            repeat(3) { attempt ->
+                if (attempt == 0) {
+                    delay(400)
+                } else {
+                    delay(800)
+                }
+
+                val state = _uiState.value
+                val busy =
+                    state.isDownloading ||
+                            state.isInstalling ||
+                            state.isCheckingEnvironment ||
+                            state.isRefreshingEnvironment
+
+                if (!busy) {
+                    runEnvironmentCheck(
+                        startNewSession = false,
+                        userInitiated = false,
+                        silentIfBusy = true
+                    )
+                    return@launch
+                }
+            }
         }
     }
 
