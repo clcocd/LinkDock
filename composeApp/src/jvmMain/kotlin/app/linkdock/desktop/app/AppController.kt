@@ -5,30 +5,24 @@ import app.linkdock.desktop.domain.OsType
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadCommandFactory
-import app.linkdock.desktop.environment.EnvironmentInspector
-import app.linkdock.desktop.install.StreamlinkInstaller
-import app.linkdock.desktop.platform.PlatformResolver
-import app.linkdock.desktop.platform.DirectoryPicker
-import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
-import app.linkdock.desktop.storage.EnvCheckCache
-import app.linkdock.desktop.storage.EnvCheckStore
+import app.linkdock.desktop.environment.EnvironmentInspector
+import app.linkdock.desktop.install.InstallationOutcome
+import app.linkdock.desktop.install.PluginInstaller
+import app.linkdock.desktop.install.StreamlinkInstaller
+import app.linkdock.desktop.platform.DirectoryPicker
+import app.linkdock.desktop.platform.PlatformResolver
 import app.linkdock.desktop.storage.AppSettings
 import app.linkdock.desktop.storage.AppSettingsStore
-import app.linkdock.desktop.install.InstallationOutcome
-import app.linkdock.desktop.install.InstallationResult
-import java.io.File
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import app.linkdock.desktop.storage.EnvCheckCache
+import app.linkdock.desktop.storage.EnvCheckStore
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CancellationException
+import java.io.File
 
 class AppController {
 
@@ -316,6 +310,9 @@ class AppController {
                         }
                     }
                 } else if (userInitiated) {
+                    _uiState.update { current ->
+                        current.copy(postInstallState = PostInstallState.NONE)
+                    }
                     setStatus("설치 확인 완료")
                     appendLog("설치 확인 완료")
                 }
@@ -369,11 +366,10 @@ class AppController {
                 )
             }
 
-            var streamlinkResult: InstallationResult?
             var shouldRunPostInstallCheck: Boolean
 
             try {
-                streamlinkResult = streamlinkInstaller.installOrUpdate(
+                val streamlinkResult = streamlinkInstaller.installOrUpdate(
                     state = state,
                     onLine = { line ->
                         appendLog(line)
@@ -383,16 +379,14 @@ class AppController {
                     }
                 )
 
-                val currentResult = streamlinkResult
+                appendLog(streamlinkResult.completionMessage)
 
-                appendLog(currentResult.completionMessage)
-
-                if (!currentResult.success) {
-                    setStatus(currentResult.completionMessage)
+                if (!streamlinkResult.success) {
+                    setStatus(streamlinkResult.completionMessage)
                     return@launch
                 }
 
-                shouldRunPostInstallCheck = currentResult.didChangeStreamlink
+                shouldRunPostInstallCheck = streamlinkResult.didChangeStreamlink
 
                 setInstallProgressText(null)
                 setStatus("플러그인 설치/업데이트 중...")
@@ -412,7 +406,7 @@ class AppController {
                     return@launch
                 }
 
-                val finalStatus = when (currentResult.outcome) {
+                val finalStatus = when (streamlinkResult.outcome) {
                     InstallationOutcome.INSTALLED ->
                         "Streamlink 설치 및 플러그인 설치/업데이트 완료"
 
@@ -425,11 +419,21 @@ class AppController {
                     InstallationOutcome.PREREQUISITE_MISSING,
                     InstallationOutcome.UNSUPPORTED_OS,
                     InstallationOutcome.FAILED ->
-                        currentResult.completionMessage
+                        streamlinkResult.completionMessage
                 }
 
                 appendLog(finalStatus)
                 setStatus(finalStatus)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val errorMessage = e.message?.takeIf { it.isNotBlank() }
+                    ?: e::class.simpleName
+                    ?: "알 수 없는 오류"
+
+                appendLog("설치/업데이트 중 오류 발생: $errorMessage")
+                setStatus("설치/업데이트 실패")
+                shouldRunPostInstallCheck = false
             } finally {
                 _uiState.update { current ->
                     current.copy(
@@ -444,7 +448,7 @@ class AppController {
                     current.copy(postInstallState = PostInstallState.VERIFYING)
                 }
 
-                appendLogSection("설치 후 설치 다시 확인")
+                appendLogSection("설치 다시 확인")
                 setStatus("설치 반영 확인 중...")
                 runEnvironmentCheck(
                     startNewSession = false,
@@ -526,76 +530,93 @@ class AppController {
             currentDownloadProcess = null
             var skippedBecauseFileExists = false
 
-            startNewLogSession("다운로드 시작")
-            appendLog("서비스: ${state.selectedService.displayName}")
-            appendLog("URL: ${state.url}")
-            appendLog("저장 경로: ${buildResult.resolvedOutputDir}")
-            appendLog("화질: ${state.quality}")
+            try {
+                startNewLogSession("다운로드 시작")
+                appendLog("서비스: ${state.selectedService.displayName}")
+                appendLog("URL: ${state.url}")
+                appendLog("저장 경로: ${buildResult.resolvedOutputDir}")
+                appendLog("화질: ${state.quality}")
 
-            _uiState.update { current ->
-                current.copy(
-                    isDownloading = true,
-                    statusMessage = "다운로드 중...",
-                    downloadProgress = null
-                )
-            }
-
-            val result = commandRunner.runStreamingDownloadCommand(
-                command = command,
-                onStdoutLine = { line ->
-                    if (line.contains("already exists", ignoreCase = true)) {
-                        skippedBecauseFileExists = true
-                    }
-
-                    val progress = StreamlinkProgressParser.parse(line)
-
-                    if (progress != null) {
-                        setDownloadProgress(progress)
-                    } else {
-                        appendLog(line)
-                    }
-                },
-                onStderrLine = { line ->
-                    if (line.contains("already exists", ignoreCase = true)) {
-                        skippedBecauseFileExists = true
-                    }
-                    appendLog(line)
-                },
-                onProcessStarted = { process ->
-                    currentDownloadProcess = process
+                _uiState.update { current ->
+                    current.copy(
+                        isDownloading = true,
+                        statusMessage = "다운로드 중...",
+                        downloadProgress = null
+                    )
                 }
-            )
 
-            val stoppedByUser = downloadStopRequested
-            downloadStopRequested = false
-            currentDownloadProcess = null
+                val result = commandRunner.runStreamingDownloadCommand(
+                    command = command,
+                    onStdoutLine = { line ->
+                        if (line.contains("already exists", ignoreCase = true)) {
+                            skippedBecauseFileExists = true
+                        }
 
-            _uiState.update { current ->
-                current.copy(
-                    isDownloading = false,
-                    downloadProgress = null
+                        val progress = StreamlinkProgressParser.parse(line)
+
+                        if (progress != null) {
+                            setDownloadProgress(progress)
+                        } else {
+                            appendLog(line)
+                        }
+                    },
+                    onStderrLine = { line ->
+                        if (line.contains("already exists", ignoreCase = true)) {
+                            skippedBecauseFileExists = true
+                        }
+                        appendLog(line)
+                    },
+                    onProcessStarted = { process ->
+                        currentDownloadProcess = process
+                    }
                 )
-            }
 
-            when {
-                stoppedByUser -> {
+                val stoppedByUser = downloadStopRequested
+
+                when {
+                    stoppedByUser -> {
+                        setStatus("다운로드 중지됨")
+                        appendLog("다운로드 중지됨")
+                    }
+
+                    skippedBecauseFileExists -> {
+                        setStatus("이미 같은 파일이 있어 건너뜀")
+                        appendLog("이미 같은 파일이 있어 건너뜀")
+                    }
+
+                    result.success -> {
+                        setStatus("다운로드 완료")
+                        appendLog("다운로드 완료")
+                    }
+
+                    else -> {
+                        setStatus("다운로드 실패")
+                        appendLog("다운로드 실패")
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val errorMessage = e.message?.takeIf { it.isNotBlank() }
+                    ?: e::class.simpleName
+                    ?: "알 수 없는 오류"
+
+                if (downloadStopRequested) {
                     setStatus("다운로드 중지됨")
                     appendLog("다운로드 중지됨")
-                }
-
-                skippedBecauseFileExists -> {
-                    setStatus("이미 같은 파일이 있어 건너뜀")
-                    appendLog("이미 같은 파일이 있어 건너뜀")
-                }
-
-                result.success -> {
-                    setStatus("다운로드 완료")
-                    appendLog("다운로드 완료")
-                }
-
-                else -> {
+                } else {
                     setStatus("다운로드 실패")
-                    appendLog("다운로드 실패")
+                    appendLog("다운로드 중 오류 발생: $errorMessage")
+                }
+            } finally {
+                downloadStopRequested = false
+                currentDownloadProcess = null
+
+                _uiState.update { current ->
+                    current.copy(
+                        isDownloading = false,
+                        downloadProgress = null
+                    )
                 }
             }
         }
