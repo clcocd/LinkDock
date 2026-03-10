@@ -50,6 +50,8 @@ class AppController {
     @Volatile
     private var downloadStopRequested: Boolean = false
 
+    private var backgroundEnvironmentRefreshJob: Job? = null
+
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
@@ -87,8 +89,10 @@ class AppController {
     }
 
     private fun startBackgroundEnvironmentRefresh() {
-        scope.launch {
-            while (true) {
+        backgroundEnvironmentRefreshJob?.cancel()
+
+        backgroundEnvironmentRefreshJob = scope.launch {
+            while (isActive) {
                 val state = _uiState.value
                 val busy =
                     state.isDownloading ||
@@ -231,7 +235,7 @@ class AppController {
             state.isDownloading ||
                     state.isInstalling ||
                     state.isCheckingEnvironment ||
-                    state.isRefreshingEnvironment
+                    (!userInitiated && state.isRefreshingEnvironment)
 
         if (busy) {
             if (!silentIfBusy) {
@@ -241,6 +245,11 @@ class AppController {
         }
 
         scope.launch {
+            if (userInitiated) {
+                backgroundEnvironmentRefreshJob?.cancelAndJoin()
+                backgroundEnvironmentRefreshJob = null
+            }
+
             _uiState.update { current ->
                 if (userInitiated) {
                     current.copy(isCheckingEnvironment = true)
