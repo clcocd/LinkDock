@@ -9,6 +9,7 @@ import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
 import app.linkdock.desktop.environment.EnvironmentInspector
 import app.linkdock.desktop.install.InstallationOutcome
+import app.linkdock.desktop.install.PluginInstallOutcome
 import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
@@ -484,8 +485,8 @@ class AppController {
                 shouldRunPostInstallCheck = true
 
                 setInstallProgressText(null)
-                setStatus("플러그인 설치/업데이트 중...")
-                appendLog("플러그인 설치/업데이트 시작")
+                setStatus("플러그인 확인 중...")
+                appendLog("플러그인 확인 시작")
 
                 val pluginResult = pluginInstaller.installOrUpdate(
                     state = state,
@@ -502,13 +503,46 @@ class AppController {
                 } else {
                     val finalStatus = when (streamlinkResult.outcome) {
                         InstallationOutcome.INSTALLED ->
-                            "Streamlink 설치 및 플러그인 설치/업데이트 완료"
+                            when (pluginResult.outcome) {
+                                PluginInstallOutcome.UPDATED ->
+                                    "Streamlink 설치가 완료되었습니다." +
+                                            "\n플러그인 업데이트가 완료되었습니다."
+
+                                PluginInstallOutcome.NO_CHANGES ->
+                                    "Streamlink 설치가 완료되었습니다." +
+                                            "\n플러그인 확인이 완료되었습니다."
+
+                                null ->
+                                    "Streamlink 설치가 완료되었습니다."
+                            }
 
                         InstallationOutcome.UPDATED ->
-                            "Streamlink 업데이트 및 플러그인 설치/업데이트 완료"
+                            when (pluginResult.outcome) {
+                                PluginInstallOutcome.UPDATED ->
+                                    "Streamlink 업데이트가 완료되었습니다." +
+                                            "\n플러그인 업데이트가 완료되었습니다."
+
+                                PluginInstallOutcome.NO_CHANGES ->
+                                    "Streamlink 업데이트가 완료되었습니다." +
+                                            "\n플러그인 확인이 완료되었습니다."
+
+                                null ->
+                                    "Streamlink 업데이트가 완료되었습니다."
+                            }
 
                         InstallationOutcome.ALREADY_LATEST ->
-                            "Streamlink는 이미 최신 상태이며 플러그인 설치/업데이트가 완료되었습니다."
+                            when (pluginResult.outcome) {
+                                PluginInstallOutcome.UPDATED ->
+                                    "Streamlink는 이미 최신 상태입니다." +
+                                            "\n플러그인 업데이트가 완료되었습니다."
+
+                                PluginInstallOutcome.NO_CHANGES ->
+                                    "Streamlink는 이미 최신 상태입니다." +
+                                            "\n플러그인 확인이 완료되었습니다."
+
+                                null ->
+                                    "Streamlink는 이미 최신 상태입니다."
+                            }
 
                         InstallationOutcome.PREREQUISITE_MISSING,
                         InstallationOutcome.UNSUPPORTED_OS,
@@ -541,7 +575,8 @@ class AppController {
 
             if (shouldRunPostInstallCheck) {
                 if (shouldRunSilentEnvironmentRefresh) {
-                    appendLog("플러그인 설치/업데이트는 실패했지만 Streamlink 상태는 다시 확인합니다.")
+                    appendLog("플러그인 확인은 실패했습니다.\n" +
+                            "Streamlink 상태는 다시 확인합니다.")
                     runEnvironmentCheck(
                         startNewSession = false,
                         userInitiated = false,

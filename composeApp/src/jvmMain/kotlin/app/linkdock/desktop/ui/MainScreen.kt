@@ -12,7 +12,8 @@ import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppInfo
 
 private val ContentMaxWidth = 1320.dp
-private val TopPanelMinHeight = 120.dp
+private val HeaderPanelMinHeight = 120.dp
+private val StatusPanelMinHeight = 88.dp
 
 @Composable
 fun MainScreen(
@@ -20,6 +21,15 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by controller.uiState.collectAsState()
+
+    val isEditLocked =
+        uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
+
+    val isActionLocked =
+        isEditLocked || uiState.isRefreshingEnvironment
+
+    val canRunEnvironmentCheck = !isActionLocked
+    val canInstallOrUpdate = !isActionLocked
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -50,7 +60,7 @@ fun MainScreen(
                         HeaderPanel(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = TopPanelMinHeight)
+                                .heightIn(min = HeaderPanelMinHeight)
                         )
 
                         DownloadForm(
@@ -62,7 +72,11 @@ fun MainScreen(
 
                     LogPanel(
                         uiState = uiState,
-                        topPanelMinHeight = TopPanelMinHeight,
+                        topPanelMinHeight = StatusPanelMinHeight,
+                        canRunEnvironmentCheck = canRunEnvironmentCheck,
+                        canInstallOrUpdate = canInstallOrUpdate,
+                        onRunEnvironmentCheck = controller::runEnvironmentCheck,
+                        onInstallOrUpdate = controller::installOrUpdateStreamlink,
                         modifier = Modifier.weight(0.40f)
                     )
                 }
@@ -75,7 +89,6 @@ fun MainScreen(
         }
     }
 }
-
 @Composable
 private fun HeaderPanel(
     modifier: Modifier = Modifier

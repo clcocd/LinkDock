@@ -54,6 +54,8 @@ class PluginInstaller(
         }
         onLine("플러그인 폴더 확인: $pluginDir")
 
+        var hasChanges = false
+
         for (asset in pluginAssets) {
             val targetFile = File(pluginDir, asset.fileName)
             val tempFile = File(pluginDir, "${asset.fileName}.tmp")
@@ -89,6 +91,13 @@ class PluginInstaller(
                     backupFile.delete()
                 }
 
+                tempFile.copyTo(targetFile, overwrite = true)
+                hasChanges = true
+
+                if (backupFile.isFile) {
+                    backupFile.delete()
+                }
+
                 onLine("${asset.fileName} 업데이트 적용 완료")
             } catch (e: Exception) {
                 val restoreMessage = if (backupCreated && backupFile.isFile) {
@@ -115,7 +124,16 @@ class PluginInstaller(
 
         return PluginInstallResult(
             success = true,
-            completionMessage = "플러그인 설치/업데이트 완료"
+            completionMessage = if (hasChanges) {
+                "플러그인 업데이트 완료"
+            } else {
+                "플러그인 확인 완료"
+            },
+            outcome = if (hasChanges) {
+                PluginInstallOutcome.UPDATED
+            } else {
+                PluginInstallOutcome.NO_CHANGES
+            }
         )
     }
 

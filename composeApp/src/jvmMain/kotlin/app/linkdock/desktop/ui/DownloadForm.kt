@@ -24,8 +24,6 @@ fun DownloadForm(
         isEditLocked || uiState.isRefreshingEnvironment
 
     val canEditFields = !isEditLocked
-    val canRunEnvironmentCheck = !isActionLocked
-    val canInstallOrUpdate = !isActionLocked
 
     val canStartDownload =
         !isActionLocked &&
@@ -49,8 +47,6 @@ fun DownloadForm(
         ActionCard(
             controller = controller,
             uiState = uiState,
-            canRunEnvironmentCheck = canRunEnvironmentCheck,
-            canInstallOrUpdate = canInstallOrUpdate,
             canStartDownload = canStartDownload
         )
     }
@@ -180,8 +176,6 @@ private fun InputCard(
 private fun ActionCard(
     controller: AppController,
     uiState: AppUiState,
-    canRunEnvironmentCheck: Boolean,
-    canInstallOrUpdate: Boolean,
     canStartDownload: Boolean
 ) {
     val actionHint = buildActionHint(uiState)
@@ -200,34 +194,6 @@ private fun ActionCard(
                 text = "실행",
                 style = MaterialTheme.typography.titleSmall
             )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = controller::runEnvironmentCheck,
-                    enabled = canRunEnvironmentCheck,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("설치 확인")
-                }
-
-                Button(
-                    onClick = controller::installOrUpdateStreamlink,
-                    enabled = canInstallOrUpdate,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        when {
-                            uiState.isInstalling -> "설치/업데이트 중"
-                            uiState.environmentSource != EnvironmentSource.VERIFIED -> "Streamlink 설치/업데이트"
-                            uiState.hasStreamlink -> "Streamlink 업데이트"
-                            else -> "Streamlink 설치"
-                        }
-                    )
-                }
-            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
