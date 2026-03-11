@@ -16,6 +16,7 @@ import app.linkdock.desktop.release.AppReleaseNotes
 import app.linkdock.desktop.release.ReleaseNoteEntry
 import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppInfo
+import app.linkdock.desktop.app.ReleaseNotesDialogMode
 
 private val ContentMaxWidth = 1320.dp
 private val HeaderPanelMinHeight = 120.dp
@@ -46,6 +47,7 @@ fun MainScreen(
         uiState.releaseNoteToShow?.let { releaseNote ->
             ReleaseNotesDialog(
                 currentVersion = releaseNote.version,
+                mode = uiState.releaseNotesDialogMode,
                 onDismiss = controller::dismissReleaseNotesDialog
             )
         }
@@ -136,18 +138,32 @@ private fun HeaderPanel(
 @Composable
 private fun ReleaseNotesDialog(
     currentVersion: String,
+    mode: ReleaseNotesDialogMode,
     onDismiss: () -> Unit
 ) {
-    val recentNotes = remember(currentVersion) {
-        AppReleaseNotes.recent(5)
+    val notes = remember(currentVersion, mode) {
+        when (mode) {
+            ReleaseNotesDialogMode.RECENT -> AppReleaseNotes.recent(5)
+            ReleaseNotesDialogMode.ALL -> AppReleaseNotes.all()
+        }
     }
 
-    val expandedVersions = remember(currentVersion) {
+    val expandedVersions = remember(currentVersion, mode) {
         mutableStateMapOf<String, Boolean>().apply {
-            recentNotes.drop(1).forEach { entry ->
+            notes.drop(1).forEach { entry ->
                 this[entry.version] = false
             }
         }
+    }
+
+    val titleText = when (mode) {
+        ReleaseNotesDialogMode.RECENT -> "새로운 업데이트"
+        ReleaseNotesDialogMode.ALL -> "변경 이력"
+    }
+
+    val subtitleText = when (mode) {
+        ReleaseNotesDialogMode.RECENT -> "LinkDock v$currentVersion"
+        ReleaseNotesDialogMode.ALL -> "전체 릴리즈 노트"
     }
 
     AlertDialog(
@@ -159,9 +175,9 @@ private fun ReleaseNotesDialog(
         },
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("새로운 업데이트")
+                Text(titleText)
                 Text(
-                    text = "LinkDock v$currentVersion",
+                    text = subtitleText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -175,7 +191,7 @@ private fun ReleaseNotesDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                recentNotes.forEachIndexed { index, entry ->
+                notes.forEachIndexed { index, entry ->
                     val isLatest = index == 0
                     val isExpanded = if (isLatest) {
                         true
@@ -194,7 +210,7 @@ private fun ReleaseNotesDialog(
                         }
                     )
 
-                    if (index < recentNotes.lastIndex) {
+                    if (index < notes.lastIndex) {
                         HorizontalDivider()
                     }
                 }

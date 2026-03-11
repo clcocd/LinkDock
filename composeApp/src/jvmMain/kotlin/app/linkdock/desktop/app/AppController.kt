@@ -79,26 +79,28 @@ class AppController {
         }
 
         _uiState.update { current ->
-            current.copy(releaseNoteToShow = currentReleaseNote)
+            current.copy(
+                releaseNoteToShow = currentReleaseNote,
+                releaseNotesDialogMode = ReleaseNotesDialogMode.RECENT
+            )
         }
     }
 
     fun dismissReleaseNotesDialog() {
         val currentVersion = AppInfo.version
-
-        _uiState.update { current ->
-            current.copy(releaseNoteToShow = null)
-        }
-
         val currentSettings = appSettingsStore.load() ?: AppSettings()
-        val saveSucceeded = appSettingsStore.save(
+
+        appSettingsStore.save(
             currentSettings.copy(
                 lastSeenReleaseNotesVersion = currentVersion
             )
         )
 
-        if (!saveSucceeded) {
-            appendLog("설정 저장 실패: 릴리즈 노트 확인 상태를 저장하지 못했습니다.")
+        _uiState.update { current ->
+            current.copy(
+                releaseNoteToShow = null,
+                releaseNotesDialogMode = ReleaseNotesDialogMode.RECENT
+            )
         }
     }
 
@@ -107,7 +109,10 @@ class AppController {
         val currentReleaseNote = AppReleaseNotes.find(currentVersion) ?: return
 
         _uiState.update { current ->
-            current.copy(releaseNoteToShow = currentReleaseNote)
+            current.copy(
+                releaseNoteToShow = currentReleaseNote,
+                releaseNotesDialogMode = ReleaseNotesDialogMode.ALL
+            )
         }
     }
 

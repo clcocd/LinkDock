@@ -25,6 +25,11 @@ enum class HangulRejectedField {
     URL
 }
 
+enum class ReleaseNotesDialogMode {
+    RECENT,
+    ALL
+}
+
 data class AppUiState(
 
     val selectedService: ServiceType? = null,
@@ -58,5 +63,6 @@ data class AppUiState(
 
     val statusMessage: String = "대기 중",
     val logs: List<String> = listOf("LinkDock 시작됨"),
-    val releaseNoteToShow: ReleaseNoteEntry? = null
+    val releaseNoteToShow: ReleaseNoteEntry? = null,
+    val releaseNotesDialogMode: ReleaseNotesDialogMode = ReleaseNotesDialogMode.RECENT
 )
