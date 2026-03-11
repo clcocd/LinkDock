@@ -8,12 +8,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
+import app.linkdock.desktop.release.AppReleaseNotes
+import app.linkdock.desktop.release.ReleaseNoteEntry
 import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppInfo
 
 private val ContentMaxWidth = 1320.dp
 private val HeaderPanelMinHeight = 120.dp
 private val StatusPanelMinHeight = 88.dp
+private val ReleaseNotesDialogMaxHeight = 420.dp
 
 @Composable
 fun MainScreen(
@@ -36,35 +43,10 @@ fun MainScreen(
         color = MaterialTheme.colorScheme.background
     ) {
 
-        val releaseNote = uiState.releaseNoteToShow
-
-        if (releaseNote != null) {
-            AlertDialog(
-                onDismissRequest = controller::dismissReleaseNotesDialog,
-                confirmButton = {
-                    TextButton(onClick = controller::dismissReleaseNotesDialog) {
-                        Text("확인")
-                    }
-                },
-                title = {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("이번 버전에서 달라진 점")
-                        Text(
-                            text = "v${releaseNote.version}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(releaseNote.title)
-
-                        releaseNote.items.forEach { item ->
-                            Text("• $item")
-                        }
-                    }
-                }
+        uiState.releaseNoteToShow?.let { releaseNote ->
+            ReleaseNotesDialog(
+                currentVersion = releaseNote.version,
+                onDismiss = controller::dismissReleaseNotesDialog
             )
         }
 
@@ -117,6 +99,7 @@ fun MainScreen(
 
             AppFooter(
                 appVersion = AppInfo.version,
+                onShowReleaseNotes = controller::showReleaseNotesDialog,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -146,6 +129,122 @@ private fun HeaderPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun ReleaseNotesDialog(
+    currentVersion: String,
+    onDismiss: () -> Unit
+) {
+    val recentNotes = remember(currentVersion) {
+        AppReleaseNotes.recent(5)
+    }
+
+    val expandedVersions = remember(currentVersion) {
+        mutableStateMapOf<String, Boolean>().apply {
+            recentNotes.drop(1).forEach { entry ->
+                this[entry.version] = false
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("확인")
+            }
+        },
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("새로운 업데이트")
+                Text(
+                    text = "LinkDock v$currentVersion",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = ReleaseNotesDialogMaxHeight)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                recentNotes.forEachIndexed { index, entry ->
+                    val isLatest = index == 0
+                    val isExpanded = if (isLatest) {
+                        true
+                    } else {
+                        expandedVersions[entry.version] == true
+                    }
+
+                    ReleaseNoteSection(
+                        entry = entry,
+                        expanded = isExpanded,
+                        collapsible = !isLatest,
+                        onToggle = {
+                            if (!isLatest) {
+                                expandedVersions[entry.version] = !isExpanded
+                            }
+                        }
+                    )
+
+                    if (index < recentNotes.lastIndex) {
+                        HorizontalDivider()
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun ReleaseNoteSection(
+    entry: ReleaseNoteEntry,
+    expanded: Boolean,
+    collapsible: Boolean,
+    onToggle: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (collapsible) {
+            TextButton(
+                onClick = onToggle,
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("v${entry.version}")
+            }
+        } else {
+            Text(
+                text = "v${entry.version}",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+
+        if (expanded) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                entry.items.forEach { item ->
+                    Text(
+                        text = "• $item",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

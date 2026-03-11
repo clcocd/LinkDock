@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AppFooter(
     appVersion: String,
+    onShowReleaseNotes: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uriHandler = LocalUriHandler.current
@@ -29,11 +30,20 @@ fun AppFooter(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = "변경 이력",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.clickable(onClick = onShowReleaseNotes)
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
 
         Text(
             text = "GitHub: LinkDock",

@@ -98,6 +98,15 @@ class AppController {
         }
     }
 
+    fun showReleaseNotesDialog() {
+        val currentVersion = AppInfo.version
+        val currentReleaseNote = AppReleaseNotes.find(currentVersion) ?: return
+
+        _uiState.update { current ->
+            current.copy(releaseNoteToShow = currentReleaseNote)
+        }
+    }
+
     private fun isInputLocked(state: AppUiState = _uiState.value): Boolean {
         return state.isDownloading || state.isInstalling || state.isCheckingEnvironment
     }
