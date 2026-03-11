@@ -1,30 +1,38 @@
 package app.linkdock.desktop
 
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.linkdock.desktop.app.AppInfo
-import java.awt.Dimension
 
 fun main() = application {
 
+    val osName = System.getProperty("os.name").lowercase()
+
+    val defaultWindowWidth = 960.dp
+    val defaultWindowHeight = when {
+        osName.contains("win") -> 672.dp
+        osName.contains("mac") || osName.contains("darwin") -> 665.dp
+        else -> 665.dp
+    }
+
+    val defaultWindowSize = DpSize(
+        width = defaultWindowWidth,
+        height = defaultWindowHeight
+    )
 
     val windowState = rememberWindowState(
-        size = DpSize(1080.dp, 665.dp)
+        size = defaultWindowSize
     )
 
     Window(
         onCloseRequest = ::exitApplication,
         title = "LinkDock v${AppInfo.version}",
-        state = windowState
+        state = windowState,
+        resizable = false
     ){
-        LaunchedEffect(Unit) {
-            window.minimumSize = Dimension(900, 665)
-        }
-
         App()
     }
 }
