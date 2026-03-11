@@ -9,6 +9,13 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.8.5",
+            title = "변경 이력 보기를 개선했습니다.",
+            items = listOf(
+                "변경 이력 표시 방식을 더 알맞게 정리했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.8.4",
             title = "앱 설정 저장을 더 안정적으로 개선했습니다.",
             items = listOf(
