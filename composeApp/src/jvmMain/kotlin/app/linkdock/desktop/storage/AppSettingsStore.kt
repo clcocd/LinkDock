@@ -30,15 +30,17 @@ class AppSettingsStore(
                 lastSeenReleaseNotesVersion = props.getProperty("lastSeenReleaseNotesVersion")
                     ?.takeIf { it.isNotBlank() }
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            System.err.println("Failed to load app settings: $path")
+            e.printStackTrace()
             null
         }
     }
 
-    fun save(settings: AppSettings) {
-        val path = filePath ?: return
+    fun save(settings: AppSettings): Boolean {
+        val path = filePath ?: return false
 
-        runCatching {
+        return runCatching {
             Files.createDirectories(path.parent)
 
             val props = Properties().apply {
@@ -52,6 +54,9 @@ class AppSettingsStore(
             }
 
             Files.newOutputStream(path).use { props.store(it, null) }
-        }
+        }.onFailure { e ->
+            System.err.println("Failed to save app settings: $path")
+            e.printStackTrace()
+        }.isSuccess
     }
 }

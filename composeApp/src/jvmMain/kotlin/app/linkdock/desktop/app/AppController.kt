@@ -85,16 +85,20 @@ class AppController {
 
     fun dismissReleaseNotesDialog() {
         val currentVersion = AppInfo.version
-        val currentSettings = appSettingsStore.load() ?: AppSettings()
 
-        appSettingsStore.save(
+        _uiState.update { current ->
+            current.copy(releaseNoteToShow = null)
+        }
+
+        val currentSettings = appSettingsStore.load() ?: AppSettings()
+        val saveSucceeded = appSettingsStore.save(
             currentSettings.copy(
                 lastSeenReleaseNotesVersion = currentVersion
             )
         )
 
-        _uiState.update { current ->
-            current.copy(releaseNoteToShow = null)
+        if (!saveSucceeded) {
+            appendLog("설정 저장 실패: 릴리즈 노트 확인 상태를 저장하지 못했습니다.")
         }
     }
 
@@ -300,9 +304,14 @@ class AppController {
 
         _uiState.value = _uiState.value.copy(outputDir = value)
 
-        appSettingsStore.save(
-            AppSettings(lastSavePath = value)
+        val currentSettings = appSettingsStore.load() ?: AppSettings()
+        val saveSucceeded = appSettingsStore.save(
+            currentSettings.copy(lastSavePath = value)
         )
+
+        if (!saveSucceeded) {
+            appendLog("설정 저장 실패: 저장 경로를 기록하지 못했습니다.")
+        }
     }
 
     fun runEnvironmentCheck() {
