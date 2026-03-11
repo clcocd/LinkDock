@@ -14,9 +14,6 @@ import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
 import app.linkdock.desktop.platform.PlatformResolver
-import app.linkdock.desktop.release.AppReleaseNotes
-import app.linkdock.desktop.storage.AppSettings
-import app.linkdock.desktop.storage.AppSettingsStore
 import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
 import kotlinx.coroutines.*
@@ -24,7 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.io.File
+
 
 class AppController {
 
@@ -44,7 +41,7 @@ class AppController {
 
     private val envCheckStore = EnvCheckStore(platformResolver)
 
-    private val appSettingsStore = AppSettingsStore(platformResolver)
+    private val appPreferencesService = AppPreferencesService(platformResolver)
 
     @Volatile
     private var currentDownloadProcess: Process? = null
@@ -70,13 +67,7 @@ class AppController {
     }
 
     private fun prepareReleaseNotesDialog() {
-        val currentVersion = AppInfo.version
-        val currentReleaseNote = AppReleaseNotes.find(currentVersion) ?: return
-        val settings = appSettingsStore.load() ?: AppSettings()
-
-        if (settings.lastSeenReleaseNotesVersion == currentVersion) {
-            return
-        }
+        val currentReleaseNote = appPreferencesService.getStartupReleaseNote() ?: return
 
         _uiState.update { current ->
             current.copy(
@@ -87,14 +78,11 @@ class AppController {
     }
 
     fun dismissReleaseNotesDialog() {
-        val currentVersion = AppInfo.version
-        val currentSettings = appSettingsStore.load() ?: AppSettings()
+        val saveSucceeded = appPreferencesService.markCurrentReleaseNotesAsSeen()
 
-        appSettingsStore.save(
-            currentSettings.copy(
-                lastSeenReleaseNotesVersion = currentVersion
-            )
-        )
+        if (!saveSucceeded) {
+            appendLog("설정 저장 실패: 릴리스 노트 확인 상태를 기록하지 못했습니다.")
+        }
 
         _uiState.update { current ->
             current.copy(
@@ -105,8 +93,7 @@ class AppController {
     }
 
     fun showReleaseNotesDialog() {
-        val currentVersion = AppInfo.version
-        val currentReleaseNote = AppReleaseNotes.find(currentVersion) ?: return
+        val currentReleaseNote = appPreferencesService.getCurrentReleaseNote() ?: return
 
         _uiState.update { current ->
             current.copy(
@@ -187,29 +174,15 @@ class AppController {
     }
 
     private fun restoreSavedOutputDirectoryOrDefault() {
-        val savedPath = appSettingsStore.load()?.lastSavePath
-        val defaultPath = platformResolver.resolveOutputDir("")
+        val restoreResult = appPreferencesService.restoreOutputDirectory()
 
-        val savedPathInvalid =
-            !savedPath.isNullOrBlank() && !isUsableDirectory(savedPath)
-
-        val visiblePath = when {
-            !savedPath.isNullOrBlank() && !savedPathInvalid -> savedPath
-            else -> defaultPath
+        restoreResult.warningLog?.let { warning ->
+            appendLog(warning)
         }
 
-        if (savedPathInvalid) {
-            appendLog("저장된 경로를 사용할 수 없어 기본 다운로드 폴더를 사용합니다.")
-        }
-
-        _uiState.value = _uiState.value.copy(outputDir = visiblePath)
-    }
-
-    private fun isUsableDirectory(path: String): Boolean {
-        return runCatching {
-            val dir = File(path)
-            dir.exists() && dir.isDirectory && dir.canWrite()
-        }.getOrDefault(false)
+        _uiState.value = _uiState.value.copy(
+            outputDir = restoreResult.visiblePath
+        )
     }
 
     fun setThemeMode(themeMode: ThemeMode) {
@@ -309,10 +282,7 @@ class AppController {
 
         _uiState.value = _uiState.value.copy(outputDir = value)
 
-        val currentSettings = appSettingsStore.load() ?: AppSettings()
-        val saveSucceeded = appSettingsStore.save(
-            currentSettings.copy(lastSavePath = value)
-        )
+        val saveSucceeded = appPreferencesService.saveOutputDirectory(value)
 
         if (!saveSucceeded) {
             appendLog("설정 저장 실패: 저장 경로를 기록하지 못했습니다.")
