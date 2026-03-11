@@ -18,6 +18,7 @@ import app.linkdock.desktop.storage.AppSettings
 import app.linkdock.desktop.storage.AppSettingsStore
 import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
+import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -645,6 +646,17 @@ class AppController {
             startNewLogSession("다운로드 시작 실패")
             appendLog("URL이 비어 있습니다.")
             _uiState.update { current -> current.copy(statusMessage = "URL 필요") }
+
+            val unsupportedUrlMessage =
+                getUnsupportedServiceUrlMessage(state.selectedService, state.url)
+
+            if (unsupportedUrlMessage != null) {
+                startNewLogSession("다운로드 시작 실패")
+                appendLog(unsupportedUrlMessage)
+                _uiState.update { current -> current.copy(statusMessage = "지원하지 않는 URL") }
+                return
+            }
+
             return
         }
 

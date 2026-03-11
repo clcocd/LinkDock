@@ -19,6 +19,17 @@ class DownloadCommandFactory(
                 errorMessage = "서비스가 선택되지 않았습니다."
             )
 
+        val normalizedUrl = state.url.trim()
+
+        val unsupportedUrlMessage = getUnsupportedServiceUrlMessage(selectedService, normalizedUrl)
+        if (unsupportedUrlMessage != null) {
+            return DownloadCommandBuildResult(
+                command = null,
+                resolvedOutputDir = null,
+                errorMessage = unsupportedUrlMessage
+            )
+        }
+
         val streamlinkExecutable = platformResolver.resolveStreamlinkExecutable(osType)
             ?: return DownloadCommandBuildResult(
                 command = null,
@@ -84,7 +95,7 @@ class DownloadCommandFactory(
 
         command += "--progress=force"
         command += "--skip"
-        command += state.url
+        command += normalizedUrl
         command += state.quality
         command += listOf("-o", outputTemplate)
 

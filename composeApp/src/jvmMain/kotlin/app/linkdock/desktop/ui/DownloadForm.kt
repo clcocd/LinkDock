@@ -10,6 +10,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
+import app.linkdock.desktop.download.getServiceUrlGuideText
+import app.linkdock.desktop.download.getServiceUrlPlaceholder
+import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
 
 @Composable
 fun DownloadForm(
@@ -25,6 +28,9 @@ fun DownloadForm(
 
     val canEditFields = !isEditLocked
 
+    val unsupportedUrlMessage =
+        getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
+
     val canStartDownload =
         !isActionLocked &&
                 uiState.environmentSource == EnvironmentSource.VERIFIED &&
@@ -32,7 +38,8 @@ fun DownloadForm(
                 uiState.hasStreamlink &&
                 uiState.email.isNotBlank() &&
                 uiState.password.isNotBlank() &&
-                uiState.url.isNotBlank()
+                uiState.url.isNotBlank() &&
+                unsupportedUrlMessage == null
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -61,6 +68,9 @@ private fun InputCard(
     val emailHangulRejected = uiState.hangulRejectedField == HangulRejectedField.EMAIL
     val passwordHangulRejected = uiState.hangulRejectedField == HangulRejectedField.PASSWORD
     val urlHangulRejected = uiState.hangulRejectedField == HangulRejectedField.URL
+    val unsupportedUrlMessage =
+        getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
+    val urlUnsupported = uiState.url.isNotBlank() && unsupportedUrlMessage != null
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -137,14 +147,26 @@ private fun InputCard(
                             if (urlHangulRejected) {
                                 "URL에는 한글을 사용할 수 없습니다."
                             } else {
-                                uiState.selectedService?.let { "${it.displayName} URL" } ?: "서비스 URL"
+                                "다운로드할 페이지 URL"
+                            }
+                        )
+                    },
+                    placeholder = {
+                        Text(getServiceUrlPlaceholder(uiState.selectedService))
+                    },
+                    supportingText = {
+                        Text(
+                            if (urlHangulRejected) {
+                                "브라우저 주소창에서 복사한 영문 URL만 입력하세요."
+                            } else {
+                                getServiceUrlGuideText(uiState.selectedService, uiState.url)
                             }
                         )
                     },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    isError = urlHangulRejected
+                    isError = urlHangulRejected || urlUnsupported
                 )
 
                 OutlinedTextField(
@@ -273,40 +295,47 @@ private fun ServiceSelector(
     }
 }
 
-private fun buildActionHint(uiState: AppUiState): String? = when {
+private fun buildActionHint(uiState: AppUiState): String? {
+    val unsupportedUrlMessage =
+        getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
 
-    uiState.postInstallState == PostInstallState.VERIFYING ->
-        "설치 반영 상태를 확인 중입니다."
+    return when {
+        uiState.postInstallState == PostInstallState.VERIFYING ->
+            "설치 반영 상태를 확인 중입니다."
 
-    uiState.postInstallState == PostInstallState.MAY_NEED_RESTART ->
-        "설치는 완료되었지만 앱을 다시 실행해야 반영될 수 있습니다."
+        uiState.postInstallState == PostInstallState.MAY_NEED_RESTART ->
+            "설치는 완료되었지만 앱을 다시 실행해야 반영될 수 있습니다."
 
-    uiState.postInstallState == PostInstallState.NEEDS_RECHECK ->
-        "설치 후 상태를 다시 확인해 주세요."
+        uiState.postInstallState == PostInstallState.NEEDS_RECHECK ->
+            "설치 후 상태를 다시 확인해 주세요."
 
-    uiState.isCheckingEnvironment ->
-        "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."
+        uiState.isCheckingEnvironment ->
+            "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."
 
-    uiState.isDownloading ->
-        "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
+        uiState.isDownloading ->
+            "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
 
-    uiState.isInstalling ->
-        "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
+        uiState.isInstalling ->
+            "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
 
-    uiState.selectedService == null ->
-        "먼저 서비스를 선택하세요."
+        uiState.selectedService == null ->
+            "먼저 서비스를 선택하세요."
 
-    uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasStreamlink ->
-        "Streamlink가 감지되지 않습니다. 설치하거나 다시 확인하세요."
+        uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasStreamlink ->
+            "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
 
-    uiState.email.isBlank() ->
-        "이메일을 입력하세요."
+        uiState.email.isBlank() ->
+            "이메일을 입력하세요."
 
-    uiState.password.isBlank() ->
-        "비밀번호를 입력하세요."
+        uiState.password.isBlank() ->
+            "비밀번호를 입력하세요."
 
-    uiState.url.isBlank() ->
-        "다운로드할 URL을 입력하세요."
+        uiState.url.isBlank() ->
+            "다운로드할 페이지 URL을 입력하세요."
 
-    else -> null
+        unsupportedUrlMessage != null ->
+            unsupportedUrlMessage
+
+        else -> null
+    }
 }

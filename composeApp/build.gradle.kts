@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "app.linkdock.desktop"
-val appVersion = "1.6"
+val appVersion = "1.7"
 version = appVersion
 
 val generateAppInfoSource by tasks.registering {
