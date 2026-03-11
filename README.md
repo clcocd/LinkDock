@@ -1,6 +1,6 @@
 # LinkDock
 
-LinkDock는 Z-aN과 SPWN 다운로드를 보다 쉽게 사용할 수 있도록 만든 Streamlink 기반 데스크톱 앱입니다.
+LinkDock는 Z-aN과 SPWN 다운로드를 보다 쉽게 사용할 수 있도록 만든 Streamlink 기반 데스크톱 앱입니다.  
 Windows와 macOS에서 사용할 수 있으며, 환경 검사, 저장 경로 복원, 다운로드 진행 로그 표시 등의 기능을 제공합니다.
 
 > Z-aN / SPWN 다운로드를 명령어 대신 GUI로 처리할 수 있도록 만든 앱입니다.
