@@ -4,7 +4,6 @@ import app.linkdock.desktop.command.CommandRunner
 import app.linkdock.desktop.download.DownloadCommandFactory
 import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
-import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
 import app.linkdock.desktop.platform.PlatformResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -80,14 +79,11 @@ class DownloadCoordinator(
                 current.copy(statusMessage = "URL 필요")
             }
 
-            val unsupportedUrlMessage =
-                getUnsupportedServiceUrlMessage(state.selectedService, state.url)
-
-            if (unsupportedUrlMessage != null) {
+            if (state.url.isBlank()) {
                 startNewLogSession("다운로드 시작 실패")
-                appendLog(unsupportedUrlMessage)
+                appendLog("URL이 비어 있습니다.")
                 updateState { current ->
-                    current.copy(statusMessage = "지원하지 않는 URL")
+                    current.copy(statusMessage = "URL 필요")
                 }
                 return
             }
