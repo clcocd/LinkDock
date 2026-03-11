@@ -120,7 +120,7 @@ private fun InputCard(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    isError = emailHangulRejected
+                    isError = inputHintIsError
                 )
 
                 OutlinedTextField(
