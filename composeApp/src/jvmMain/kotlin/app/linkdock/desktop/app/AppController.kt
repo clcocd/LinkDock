@@ -1,21 +1,17 @@
 package app.linkdock.desktop.app
 
 import app.linkdock.desktop.command.CommandRunner
-import app.linkdock.desktop.domain.OsType
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadCommandFactory
 import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
 import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
-import app.linkdock.desktop.environment.EnvironmentInspector
 import app.linkdock.desktop.install.PluginInstallOutcome
 import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
 import app.linkdock.desktop.platform.PlatformResolver
-import app.linkdock.desktop.storage.EnvCheckCache
-import app.linkdock.desktop.storage.EnvCheckStore
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,15 +27,11 @@ class AppController {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val environmentInspector = EnvironmentInspector(platformResolver, commandRunner)
-
     private val downloadCommandFactory = DownloadCommandFactory(platformResolver)
 
     private val streamlinkInstaller = StreamlinkInstaller(platformResolver, commandRunner)
 
     private val pluginInstaller = PluginInstaller(platformResolver)
-
-    private val envCheckStore = EnvCheckStore(platformResolver)
 
     private val appPreferencesService = AppPreferencesService(platformResolver)
 
@@ -49,19 +41,24 @@ class AppController {
     @Volatile
     private var downloadStopRequested: Boolean = false
 
-    private var backgroundEnvironmentRefreshJob: Job? = null
-
-    private var environmentCheckJob: Job? = null
-
-    @Volatile
-    private var environmentCheckJobUserInitiated: Boolean = false
-
     private val _uiState = MutableStateFlow(AppUiState())
+
+    private val environmentCheckCoordinator = EnvironmentCheckCoordinator(
+        scope = scope,
+        platformResolver = platformResolver,
+        commandRunner = commandRunner,
+        getState = { _uiState.value },
+        updateState = { transform -> _uiState.update(transform) },
+        appendLog = ::appendLog,
+        startNewLogSession = ::startNewLogSession,
+        setStatus = ::setStatus
+    )
+
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     init {
-        restoreCachedEnvironmentState()
-        startBackgroundEnvironmentRefresh()
+        environmentCheckCoordinator.restoreCachedEnvironmentState()
+        environmentCheckCoordinator.startBackgroundEnvironmentRefresh()
         restoreSavedOutputDirectoryOrDefault()
         prepareReleaseNotesDialog()
     }
@@ -125,51 +122,6 @@ class AppController {
             sanitized != original -> field
             current.hangulRejectedField == field -> null
             else -> current.hangulRejectedField
-        }
-    }
-
-    private fun restoreCachedEnvironmentState() {
-        val cache = envCheckStore.load() ?: return
-
-        _uiState.update { current ->
-            current.copy(
-                osType = cache.osType,
-                hasStreamlink = cache.hasStreamlink,
-                hasFfmpeg = cache.hasFfmpeg,
-                hasBrew = cache.hasBrew,
-                hasWinget = cache.hasWinget,
-                environmentSource = EnvironmentSource.CACHED,
-                lastEnvironmentCheckedAtEpochMillis = cache.checkedAtEpochMillis
-            )
-        }
-    }
-
-    private fun startBackgroundEnvironmentRefresh() {
-        backgroundEnvironmentRefreshJob?.cancel()
-
-        backgroundEnvironmentRefreshJob = scope.launch {
-            while (isActive) {
-                val state = _uiState.value
-                val environmentCheckRunning = environmentCheckJob?.isActive == true
-
-                val busy =
-                    state.isDownloading ||
-                            state.isInstalling ||
-                            state.isCheckingEnvironment ||
-                            state.isRefreshingEnvironment ||
-                            environmentCheckRunning
-
-                if (!busy) {
-                    runEnvironmentCheck(
-                        startNewSession = false,
-                        userInitiated = false,
-                        silentIfBusy = true
-                    )
-                    return@launch
-                }
-
-                delay(1000)
-            }
         }
     }
 
@@ -290,184 +242,9 @@ class AppController {
     }
 
     fun runEnvironmentCheck() {
-        runEnvironmentCheck(
-            startNewSession = true,
-            userInitiated = true
-
-        )
+        environmentCheckCoordinator.runUserEnvironmentCheck()
     }
 
-    private fun runEnvironmentCheck(
-        startNewSession: Boolean,
-        userInitiated: Boolean,
-        showPostInstallHint: Boolean = false,
-        silentIfBusy: Boolean = false
-    ) {
-        val previousEnvironmentCheckJob = environmentCheckJob
-        val previousEnvironmentCheckJobUserInitiated = environmentCheckJobUserInitiated
-
-        val job = scope.launch {
-            if (userInitiated) {
-                backgroundEnvironmentRefreshJob?.cancelAndJoin()
-                backgroundEnvironmentRefreshJob = null
-
-                if (
-                    previousEnvironmentCheckJob != null &&
-                    previousEnvironmentCheckJob.isActive &&
-                    !previousEnvironmentCheckJobUserInitiated
-                ) {
-                    previousEnvironmentCheckJob.cancelAndJoin()
-                }
-            }
-
-            val state = _uiState.value
-            val anotherEnvironmentCheckRunning =
-                previousEnvironmentCheckJob != null &&
-                        previousEnvironmentCheckJob.isActive &&
-                        previousEnvironmentCheckJob !== coroutineContext[Job]
-
-            val busy =
-                state.isDownloading ||
-                        state.isInstalling ||
-                        state.isCheckingEnvironment ||
-                        state.isRefreshingEnvironment ||
-                        anotherEnvironmentCheckRunning
-
-            if (busy) {
-                if (!silentIfBusy) {
-                    appendLog("작업 중에는 설치 확인을 실행하지 않습니다.")
-                }
-                return@launch
-            }
-
-            _uiState.update { current ->
-                if (userInitiated) {
-                    current.copy(isCheckingEnvironment = true)
-                } else {
-                    current.copy(isRefreshingEnvironment = true)
-                }
-            }
-
-            try {
-                if (userInitiated) {
-                    if (startNewSession) {
-                        startNewLogSession("설치 확인 시작")
-                    } else {
-                        appendLog("설치 다시 확인 시작")
-                    }
-                    setStatus("설치 확인 중...")
-                }
-
-                val result = environmentInspector.inspect()
-
-                if (userInitiated) {
-                    result.logs.forEach { log ->
-                        appendLog(log)
-                    }
-                }
-
-                updateEnvironmentState(
-                    osType = result.osType,
-                    hasStreamlink = result.hasStreamlink,
-                    hasFfmpeg = result.hasFfmpeg,
-                    hasBrew = result.hasBrew,
-                    hasWinget = result.hasWinget
-                )
-
-                envCheckStore.save(
-                    EnvCheckCache(
-                        checkedAtEpochMillis = System.currentTimeMillis(),
-                        osType = result.osType,
-                        hasStreamlink = result.hasStreamlink,
-                        hasFfmpeg = result.hasFfmpeg,
-                        hasBrew = result.hasBrew,
-                        hasWinget = result.hasWinget
-                    )
-                )
-
-                if (showPostInstallHint) {
-                    val nextPostInstallState = when {
-                        result.osType == OsType.WINDOWS &&
-                                (!result.hasStreamlink || !result.hasFfmpeg) ->
-                            PostInstallState.MAY_NEED_RESTART
-
-                        !result.hasStreamlink || !result.hasFfmpeg ->
-                            PostInstallState.NEEDS_RECHECK
-
-                        else ->
-                            PostInstallState.NONE
-                    }
-
-                    _uiState.update { current ->
-                        current.copy(postInstallState = nextPostInstallState)
-                    }
-
-                    when (nextPostInstallState) {
-                        PostInstallState.MAY_NEED_RESTART -> {
-                            appendLog("설치는 완료되었지만 현재 앱에서 아직 Streamlink 또는 FFmpeg가 인식되지 않았습니다.")
-                            appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
-                            setStatus("설치 완료, 앱 재실행 필요할 수 있음")
-                        }
-
-                        PostInstallState.NEEDS_RECHECK -> {
-                            appendLog("설치 후에도 아직 Streamlink 또는 FFmpeg가 감지되지 않았습니다.")
-                            appendLog("잠시 후 다시 설치 확인을 다시 실행해 주세요.")
-                            setStatus("설치 후 다시 확인 필요")
-                        }
-
-                        PostInstallState.NONE -> {
-                            setStatus("설치 후 상태 확인 완료")
-                            appendLog("설치 후 상태 확인 완료")
-                        }
-
-                        PostInstallState.VERIFYING -> {
-                            // 여기까지 오면 안 되므로 아무 처리 안 함
-                        }
-                    }
-                } else if (userInitiated) {
-                    _uiState.update { current ->
-                        current.copy(postInstallState = PostInstallState.NONE)
-                    }
-                    setStatus("설치 확인 완료")
-                    appendLog("설치 확인 완료")
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                val errorMessage = e.message?.takeIf { it.isNotBlank() }
-                    ?: e::class.simpleName
-                    ?: "알 수 없는 오류"
-
-                if (userInitiated || showPostInstallHint) {
-                    appendLog("설치 확인 중 오류 발생: $errorMessage")
-                }
-
-                if (showPostInstallHint) {
-                    _uiState.update { current ->
-                        current.copy(postInstallState = PostInstallState.NEEDS_RECHECK)
-                    }
-                    setStatus("설치 후 다시 확인 필요")
-                } else if (userInitiated) {
-                    setStatus("설치 확인 실패")
-                }
-            } finally {
-                _uiState.update { current ->
-                    if (userInitiated) {
-                        current.copy(isCheckingEnvironment = false)
-                    } else {
-                        current.copy(isRefreshingEnvironment = false)
-                    }
-                }
-
-                if (environmentCheckJob === coroutineContext[Job]) {
-                    environmentCheckJob = null
-                }
-            }
-        }
-
-        environmentCheckJobUserInitiated = userInitiated
-        environmentCheckJob = job
-    }
 
     fun installOrUpdateStreamlink() {
         val state = _uiState.value
@@ -569,12 +346,7 @@ class AppController {
             if (shouldRunPostInstallCheck) {
                 if (shouldRunSilentEnvironmentRefresh) {
                     appendLog("플러그인 확인은 실패했습니다.\nStreamlink / FFmpeg 상태는 다시 확인합니다.")
-                    runEnvironmentCheck(
-                        startNewSession = false,
-                        userInitiated = false,
-                        showPostInstallHint = false,
-                        silentIfBusy = true
-                    )
+                    environmentCheckCoordinator.runSilentEnvironmentRefresh()
                 } else {
                     _uiState.update { current ->
                         current.copy(postInstallState = PostInstallState.VERIFYING)
@@ -582,11 +354,7 @@ class AppController {
 
                     appendLogSection("설치 다시 확인")
                     setStatus("설치 반영 확인 중...")
-                    runEnvironmentCheck(
-                        startNewSession = false,
-                        userInitiated = true,
-                        showPostInstallHint = true
-                    )
+                    environmentCheckCoordinator.runPostInstallVerification()
                 }
             }
         }
@@ -812,26 +580,6 @@ class AppController {
     private fun startNewLogSession(title: String) {
         _uiState.update { current ->
             current.copy(logs = listOf(title))
-        }
-    }
-
-    private fun updateEnvironmentState(
-        osType: OsType,
-        hasStreamlink: Boolean,
-        hasFfmpeg: Boolean,
-        hasBrew: Boolean = false,
-        hasWinget: Boolean = false
-    ) {
-        _uiState.update { current ->
-            current.copy(
-                osType = osType,
-                hasStreamlink = hasStreamlink,
-                hasFfmpeg = hasFfmpeg,
-                hasBrew = hasBrew,
-                hasWinget = hasWinget,
-                environmentSource = EnvironmentSource.VERIFIED,
-                lastEnvironmentCheckedAtEpochMillis = System.currentTimeMillis()
-            )
         }
     }
 
