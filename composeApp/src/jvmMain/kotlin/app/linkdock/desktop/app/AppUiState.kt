@@ -48,6 +48,7 @@ data class AppUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val osType: OsType? = null,
     val hasStreamlink: Boolean = false,
+    val hasFfmpeg: Boolean = false,
     val hasBrew: Boolean = false,
     val hasWinget: Boolean = false,
     val environmentSource: EnvironmentSource = EnvironmentSource.UNKNOWN,

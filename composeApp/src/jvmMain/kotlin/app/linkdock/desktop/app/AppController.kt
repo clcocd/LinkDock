@@ -7,19 +7,18 @@ import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadCommandFactory
 import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.StreamlinkProgressParser
+import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
 import app.linkdock.desktop.environment.EnvironmentInspector
-import app.linkdock.desktop.install.InstallationOutcome
 import app.linkdock.desktop.install.PluginInstallOutcome
 import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
 import app.linkdock.desktop.platform.PlatformResolver
+import app.linkdock.desktop.release.AppReleaseNotes
 import app.linkdock.desktop.storage.AppSettings
 import app.linkdock.desktop.storage.AppSettingsStore
 import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
-import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
-import app.linkdock.desktop.release.AppReleaseNotes
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,6 +130,7 @@ class AppController {
             current.copy(
                 osType = cache.osType,
                 hasStreamlink = cache.hasStreamlink,
+                hasFfmpeg = cache.hasFfmpeg,
                 hasBrew = cache.hasBrew,
                 hasWinget = cache.hasWinget,
                 environmentSource = EnvironmentSource.CACHED,
@@ -376,6 +376,7 @@ class AppController {
                 updateEnvironmentState(
                     osType = result.osType,
                     hasStreamlink = result.hasStreamlink,
+                    hasFfmpeg = result.hasFfmpeg,
                     hasBrew = result.hasBrew,
                     hasWinget = result.hasWinget
                 )
@@ -385,6 +386,7 @@ class AppController {
                         checkedAtEpochMillis = System.currentTimeMillis(),
                         osType = result.osType,
                         hasStreamlink = result.hasStreamlink,
+                        hasFfmpeg = result.hasFfmpeg,
                         hasBrew = result.hasBrew,
                         hasWinget = result.hasWinget
                     )
@@ -392,10 +394,11 @@ class AppController {
 
                 if (showPostInstallHint) {
                     val nextPostInstallState = when {
-                        result.osType == OsType.WINDOWS && !result.hasStreamlink ->
+                        result.osType == OsType.WINDOWS &&
+                                (!result.hasStreamlink || !result.hasFfmpeg) ->
                             PostInstallState.MAY_NEED_RESTART
 
-                        !result.hasStreamlink ->
+                        !result.hasStreamlink || !result.hasFfmpeg ->
                             PostInstallState.NEEDS_RECHECK
 
                         else ->
@@ -408,13 +411,13 @@ class AppController {
 
                     when (nextPostInstallState) {
                         PostInstallState.MAY_NEED_RESTART -> {
-                            appendLog("Streamlink 설치는 완료되었지만 현재 앱에서 아직 인식되지 않았습니다.")
+                            appendLog("설치는 완료되었지만 현재 앱에서 아직 Streamlink 또는 FFmpeg가 인식되지 않았습니다.")
                             appendLog("이 경우 앱을 종료한 뒤 다시 실행하면 정상 반영될 수 있습니다.")
                             setStatus("설치 완료, 앱 재실행 필요할 수 있음")
                         }
 
                         PostInstallState.NEEDS_RECHECK -> {
-                            appendLog("설치 후에도 아직 Streamlink가 감지되지 않았습니다.")
+                            appendLog("설치 후에도 아직 Streamlink 또는 FFmpeg가 감지되지 않았습니다.")
                             appendLog("잠시 후 다시 설치 확인을 다시 실행해 주세요.")
                             setStatus("설치 후 다시 확인 필요")
                         }
@@ -482,8 +485,8 @@ class AppController {
         }
 
         scope.launch {
-            startNewLogSession("Streamlink 설치/업데이트 시작")
-            setStatus("Streamlink 설치/업데이트 준비 중...")
+            startNewLogSession("Streamlink / FFmpeg 설치/업데이트 시작")
+            setStatus("Streamlink / FFmpeg 설치/업데이트 준비 중...")
 
             _uiState.update { current ->
                 current.copy(
@@ -533,53 +536,18 @@ class AppController {
                     setStatus(pluginResult.completionMessage)
                     shouldRunSilentEnvironmentRefresh = true
                 } else {
-                    val finalStatus = when (streamlinkResult.outcome) {
-                        InstallationOutcome.INSTALLED ->
-                            when (pluginResult.outcome) {
-                                PluginInstallOutcome.UPDATED ->
-                                    "Streamlink 설치가 완료되었습니다." +
-                                            "\n플러그인 업데이트가 완료되었습니다."
+                    val pluginStatus = when (pluginResult.outcome) {
+                        PluginInstallOutcome.UPDATED -> "플러그인 업데이트가 완료되었습니다."
+                        PluginInstallOutcome.NO_CHANGES -> "플러그인 확인이 완료되었습니다."
+                        null -> null
+                    }
 
-                                PluginInstallOutcome.NO_CHANGES ->
-                                    "Streamlink 설치가 완료되었습니다." +
-                                            "\n플러그인 확인이 완료되었습니다."
-
-                                null ->
-                                    "Streamlink 설치가 완료되었습니다."
-                            }
-
-                        InstallationOutcome.UPDATED ->
-                            when (pluginResult.outcome) {
-                                PluginInstallOutcome.UPDATED ->
-                                    "Streamlink 업데이트가 완료되었습니다." +
-                                            "\n플러그인 업데이트가 완료되었습니다."
-
-                                PluginInstallOutcome.NO_CHANGES ->
-                                    "Streamlink 업데이트가 완료되었습니다." +
-                                            "\n플러그인 확인이 완료되었습니다."
-
-                                null ->
-                                    "Streamlink 업데이트가 완료되었습니다."
-                            }
-
-                        InstallationOutcome.ALREADY_LATEST ->
-                            when (pluginResult.outcome) {
-                                PluginInstallOutcome.UPDATED ->
-                                    "Streamlink는 이미 최신 상태입니다." +
-                                            "\n플러그인 업데이트가 완료되었습니다."
-
-                                PluginInstallOutcome.NO_CHANGES ->
-                                    "Streamlink는 이미 최신 상태입니다." +
-                                            "\n플러그인 확인이 완료되었습니다."
-
-                                null ->
-                                    "Streamlink는 이미 최신 상태입니다."
-                            }
-
-                        InstallationOutcome.PREREQUISITE_MISSING,
-                        InstallationOutcome.UNSUPPORTED_OS,
-                        InstallationOutcome.FAILED ->
-                            streamlinkResult.completionMessage
+                    val finalStatus = buildString {
+                        append(streamlinkResult.completionMessage)
+                        if (!pluginStatus.isNullOrBlank()) {
+                            append("\n")
+                            append(pluginStatus)
+                        }
                     }
 
                     appendLog(finalStatus)
@@ -607,8 +575,7 @@ class AppController {
 
             if (shouldRunPostInstallCheck) {
                 if (shouldRunSilentEnvironmentRefresh) {
-                    appendLog("플러그인 확인은 실패했습니다.\n" +
-                            "Streamlink 상태는 다시 확인합니다.")
+                    appendLog("플러그인 확인은 실패했습니다.\nStreamlink / FFmpeg 상태는 다시 확인합니다.")
                     runEnvironmentCheck(
                         startNewSession = false,
                         userInitiated = false,
@@ -696,6 +663,14 @@ class AppController {
             appendLog("Streamlink가 현재 앱에서 인식되지 않습니다.")
             appendLog("먼저 설치하거나 앱을 다시 시작한 뒤 다시 시도해주세요.")
             _uiState.update { current -> current.copy(statusMessage = "Streamlink 필요") }
+            return
+        }
+
+        if (!state.hasFfmpeg) {
+            startNewLogSession("다운로드 시작 실패")
+            appendLog("FFmpeg가 현재 앱에서 인식되지 않습니다.")
+            appendLog("먼저 설치/업데이트를 실행하거나 앱을 다시 시작한 뒤 다시 시도해주세요.")
+            _uiState.update { current -> current.copy(statusMessage = "FFmpeg 필요") }
             return
         }
 
@@ -850,6 +825,7 @@ class AppController {
     private fun updateEnvironmentState(
         osType: OsType,
         hasStreamlink: Boolean,
+        hasFfmpeg: Boolean,
         hasBrew: Boolean = false,
         hasWinget: Boolean = false
     ) {
@@ -857,6 +833,7 @@ class AppController {
             current.copy(
                 osType = osType,
                 hasStreamlink = hasStreamlink,
+                hasFfmpeg = hasFfmpeg,
                 hasBrew = hasBrew,
                 hasWinget = hasWinget,
                 environmentSource = EnvironmentSource.VERIFIED,

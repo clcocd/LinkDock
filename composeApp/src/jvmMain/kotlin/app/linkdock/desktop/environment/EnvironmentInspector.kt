@@ -22,6 +22,7 @@ class EnvironmentInspector(
                 EnvironmentInspectionResult(
                     osType = OsType.UNSUPPORTED,
                     hasStreamlink = false,
+                    hasFfmpeg = false,
                     logs = logs
                 )
             }
@@ -35,13 +36,15 @@ class EnvironmentInspector(
             streamlinkPath,
             "--version"
         )
+        appendToolStatus(logs, "Streamlink", streamlink.success, streamlink.firstLine)
 
-        appendToolStatus(
-            logs = logs,
-            label = "Streamlink",
-            success = streamlink.success,
-            firstLine = streamlink.firstLine
+        val ffmpegPath = platformResolver.findCommandPath(OsType.MAC, "ffmpeg")
+        val ffmpeg = commandRunner.runCommandWithFallback(
+            "ffmpeg",
+            ffmpegPath,
+            "-version"
         )
+        appendToolStatus(logs, "FFmpeg", ffmpeg.success, ffmpeg.firstLine)
 
         val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
         val brew = commandRunner.runCommandWithFallback(
@@ -49,17 +52,12 @@ class EnvironmentInspector(
             brewPath,
             "--version"
         )
-
-        appendToolStatus(
-            logs = logs,
-            label = "Homebrew",
-            success = brew.success,
-            firstLine = brew.firstLine
-        )
+        appendToolStatus(logs, "Homebrew", brew.success, brew.firstLine)
 
         return EnvironmentInspectionResult(
             osType = OsType.MAC,
             hasStreamlink = streamlink.success,
+            hasFfmpeg = ffmpeg.success,
             hasBrew = brew.success,
             logs = logs
         )
@@ -74,9 +72,14 @@ class EnvironmentInspector(
         val streamlink = commandRunner.runCommandWithFallback("streamlink", streamlinkPath, "--version")
         appendToolStatus(logs, "Streamlink", streamlink.success, streamlink.firstLine)
 
+        val ffmpegPath = platformResolver.findCommandPath(OsType.WINDOWS, "ffmpeg")
+        val ffmpeg = commandRunner.runCommandWithFallback("ffmpeg", ffmpegPath, "-version")
+        appendToolStatus(logs, "FFmpeg", ffmpeg.success, ffmpeg.firstLine)
+
         return EnvironmentInspectionResult(
             osType = OsType.WINDOWS,
             hasStreamlink = streamlink.success,
+            hasFfmpeg = ffmpeg.success,
             hasWinget = winget.success,
             logs = logs
         )

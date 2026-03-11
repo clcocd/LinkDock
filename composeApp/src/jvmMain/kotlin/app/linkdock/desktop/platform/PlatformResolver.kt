@@ -37,6 +37,14 @@ class PlatformResolver {
         }
     }
 
+    fun resolveFfmpegExecutable(osType: OsType): String? {
+        return when (osType) {
+            OsType.MAC -> findCommandPath(osType, "ffmpeg") ?: "ffmpeg"
+            OsType.WINDOWS -> findCommandPath(osType, "ffmpeg") ?: "ffmpeg"
+            OsType.UNSUPPORTED -> null
+        }
+    }
+
     fun resolveAppDataDir(osType: OsType): String? {
         val home = System.getProperty("user.home").orEmpty()
 
@@ -98,7 +106,7 @@ class PlatformResolver {
     }
 
     fun findMacCommandPath(commandName: String): String? {
-        val candidates = when (commandName) {
+        val candidates = when (commandName.lowercase()) {
             "brew" -> listOf(
                 "/opt/homebrew/bin/brew",
                 "/usr/local/bin/brew"
@@ -107,6 +115,11 @@ class PlatformResolver {
             "streamlink" -> listOf(
                 "/opt/homebrew/bin/streamlink",
                 "/usr/local/bin/streamlink"
+            )
+
+            "ffmpeg" -> listOf(
+                "/opt/homebrew/bin/ffmpeg",
+                "/usr/local/bin/ffmpeg"
             )
 
             else -> emptyList()
@@ -120,7 +133,7 @@ class PlatformResolver {
         val programData = System.getenv("ProgramData").orEmpty()
         val userProfile = System.getenv("USERPROFILE").orEmpty()
 
-        val candidates = when (commandName.lowercase()) {
+        val staticCandidates = when (commandName.lowercase()) {
             "winget" -> listOf(
                 "$localAppData\\Microsoft\\WindowsApps\\winget.exe"
             )
@@ -132,11 +145,48 @@ class PlatformResolver {
                 "$userProfile\\scoop\\shims\\streamlink.exe"
             )
 
+            "ffmpeg" -> listOf(
+                "$localAppData\\Programs\\ffmpeg\\bin\\ffmpeg.exe",
+                "$localAppData\\ffmpeg\\bin\\ffmpeg.exe",
+                "$programData\\chocolatey\\bin\\ffmpeg.exe",
+                "$userProfile\\scoop\\shims\\ffmpeg.exe"
+            )
+
             else -> emptyList()
         }
 
-        return candidates.firstOrNull { path ->
+        val staticMatch = staticCandidates.firstOrNull { path ->
             path.isNotBlank() && File(path).canExecute()
         }
+        if (staticMatch != null) {
+            return staticMatch
+        }
+
+        return when (commandName.lowercase()) {
+            "ffmpeg" -> findWingetFfmpegPath(localAppData)
+            else -> null
+        }
+    }
+
+    private fun findWingetFfmpegPath(localAppData: String): String? {
+        if (localAppData.isBlank()) return null
+
+        val packagesDir = File(localAppData, "Microsoft\\WinGet\\Packages")
+        if (!packagesDir.isDirectory) return null
+
+        val ffmpegPackageDir = packagesDir.listFiles()
+            ?.filter { it.isDirectory && it.name.startsWith("Gyan.FFmpeg_", ignoreCase = true) }
+            ?.maxByOrNull { it.lastModified() }
+            ?: return null
+
+        return ffmpegPackageDir
+            .walkTopDown()
+            .maxDepth(6)
+            .firstOrNull { file ->
+                file.isFile &&
+                        file.name.equals("ffmpeg.exe", ignoreCase = true) &&
+                        file.parentFile?.name.equals("bin", ignoreCase = true)
+            }
+            ?.absolutePath
     }
 }

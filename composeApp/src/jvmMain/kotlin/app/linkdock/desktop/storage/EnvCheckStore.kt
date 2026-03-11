@@ -34,6 +34,7 @@ class EnvCheckStore(
                 checkedAtEpochMillis = checkedAt,
                 osType = osType,
                 hasStreamlink = props.getProperty("hasStreamlink")?.toBoolean() ?: false,
+                hasFfmpeg = props.getProperty("hasFfmpeg")?.toBoolean() ?: false,
                 hasBrew = props.getProperty("hasBrew")?.toBoolean() ?: false,
                 hasWinget = props.getProperty("hasWinget")?.toBoolean() ?: false
             )
@@ -52,6 +53,7 @@ class EnvCheckStore(
                 setProperty("checkedAtEpochMillis", cache.checkedAtEpochMillis.toString())
                 setProperty("osType", cache.osType.name)
                 setProperty("hasStreamlink", cache.hasStreamlink.toString())
+                setProperty("hasFfmpeg", cache.hasFfmpeg.toString())
                 setProperty("hasBrew", cache.hasBrew.toString())
                 setProperty("hasWinget", cache.hasWinget.toString())
             }

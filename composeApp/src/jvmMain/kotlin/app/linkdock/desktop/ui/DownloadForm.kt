@@ -36,6 +36,7 @@ fun DownloadForm(
                 uiState.environmentSource == EnvironmentSource.VERIFIED &&
                 uiState.selectedService != null &&
                 uiState.hasStreamlink &&
+                uiState.hasFfmpeg &&
                 uiState.email.isNotBlank() &&
                 uiState.password.isNotBlank() &&
                 uiState.url.isNotBlank() &&
@@ -190,15 +191,17 @@ private fun InputCard(
                 )
             }
 
-            Text(
-                text = inputHintMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (inputHintIsError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
+            inputHintMessage.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (inputHintIsError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
 
         }
     }
@@ -333,6 +336,9 @@ private fun buildActionHint(uiState: AppUiState): String? {
 
         uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasStreamlink ->
             "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
+
+        uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasFfmpeg ->
+            "FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
 
         uiState.email.isBlank() ->
             "이메일을 입력하세요."

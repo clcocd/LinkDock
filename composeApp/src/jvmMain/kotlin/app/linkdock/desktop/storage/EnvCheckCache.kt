@@ -6,6 +6,7 @@ data class EnvCheckCache(
     val checkedAtEpochMillis: Long,
     val osType: OsType,
     val hasStreamlink: Boolean,
+    val hasFfmpeg: Boolean,
     val hasBrew: Boolean,
     val hasWinget: Boolean
 )

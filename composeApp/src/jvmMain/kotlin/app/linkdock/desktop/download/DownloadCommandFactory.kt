@@ -36,6 +36,12 @@ class DownloadCommandFactory(
                 errorMessage = "현재 운영체제에서는 다운로드를 지원하지 않습니다."
             )
 
+        val ffmpegExecutable = platformResolver.resolveFfmpegExecutable(osType)
+            ?: return DownloadCommandBuildResult(
+                command = null,
+                errorMessage = "FFmpeg 실행 파일 경로를 결정할 수 없습니다."
+            )
+
         val pluginDir = platformResolver.resolveAppPluginDir(osType)
             ?: return DownloadCommandBuildResult(
                 command = null,
@@ -80,6 +86,7 @@ class DownloadCommandFactory(
         val command = mutableListOf<String>()
         command += streamlinkExecutable
         command += listOf("--plugin-dir", pluginDir)
+        command += listOf("--ffmpeg-ffmpeg", ffmpegExecutable)
 
         when (selectedService) {
             ServiceType.ZAN -> {
