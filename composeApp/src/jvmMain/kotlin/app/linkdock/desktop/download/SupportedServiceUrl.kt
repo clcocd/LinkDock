@@ -69,6 +69,6 @@ fun getServiceUrlHintMessage(service: ServiceType?, rawUrl: String): String {
             "SPWN은 이벤트 페이지 주소를 넣어 주세요. 예: spwn.jp/events/..."
 
         null ->
-            "서비스를 먼저 선택한 뒤, 브라우저 주소창의 전체 주소를 붙여넣어 주세요."
+            ""
     }
 }
