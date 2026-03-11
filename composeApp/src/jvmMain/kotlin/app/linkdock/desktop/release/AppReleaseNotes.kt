@@ -9,6 +9,17 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.8.3",
+            title = "설치와 다운로드 흐름을 더 자연스럽게 개선했습니다.",
+            items = listOf(
+                "Streamlink 설치 버튼에서 FFmpeg도 함께 확인하고 필요한 경우 같이 설치할 수 있습니다.",
+                "FFmpeg가 없는 상태에서는 다운로드를 시작하지 않도록 개선했습니다.",
+                "다운로드 시 오디오 누락이나 병합 문제를 줄이기 위해 FFmpeg 연동을 보강했습니다.",
+                "직접 설치한 Streamlink와 FFmpeg도 더 잘 인식하도록 개선했습니다.",
+                "설치 확인과 업데이트 흐름을 정리해 전체 동작을 더 안정적으로 다듬었습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.8.2",
             title = "입력 안내와 상태 안내를 더 이해하기 쉽게 다듬었습니다.",
             items = listOf(
@@ -21,5 +32,13 @@ object AppReleaseNotes {
 
     fun find(version: String): ReleaseNoteEntry? {
         return notes.firstOrNull { it.version == version }
+    }
+
+    fun recent(limit: Int = 5): List<ReleaseNoteEntry> {
+        return notes.take(limit)
+    }
+
+    fun all(): List<ReleaseNoteEntry> {
+        return notes
     }
 }
