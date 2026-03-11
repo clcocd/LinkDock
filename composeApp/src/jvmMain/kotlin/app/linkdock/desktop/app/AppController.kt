@@ -19,6 +19,7 @@ import app.linkdock.desktop.storage.AppSettingsStore
 import app.linkdock.desktop.storage.EnvCheckCache
 import app.linkdock.desktop.storage.EnvCheckStore
 import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
+import app.linkdock.desktop.release.AppReleaseNotes
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +67,36 @@ class AppController {
         restoreCachedEnvironmentState()
         startBackgroundEnvironmentRefresh()
         restoreSavedOutputDirectoryOrDefault()
+        prepareReleaseNotesDialog()
+    }
+
+    private fun prepareReleaseNotesDialog() {
+        val currentVersion = AppInfo.version
+        val currentReleaseNote = AppReleaseNotes.find(currentVersion) ?: return
+        val settings = appSettingsStore.load() ?: AppSettings()
+
+        if (settings.lastSeenReleaseNotesVersion == currentVersion) {
+            return
+        }
+
+        _uiState.update { current ->
+            current.copy(releaseNoteToShow = currentReleaseNote)
+        }
+    }
+
+    fun dismissReleaseNotesDialog() {
+        val currentVersion = AppInfo.version
+        val currentSettings = appSettingsStore.load() ?: AppSettings()
+
+        appSettingsStore.save(
+            currentSettings.copy(
+                lastSeenReleaseNotesVersion = currentVersion
+            )
+        )
+
+        _uiState.update { current ->
+            current.copy(releaseNoteToShow = null)
+        }
     }
 
     private fun isInputLocked(state: AppUiState = _uiState.value): Boolean {

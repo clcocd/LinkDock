@@ -35,6 +35,39 @@ fun MainScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+
+        val releaseNote = uiState.releaseNoteToShow
+
+        if (releaseNote != null) {
+            AlertDialog(
+                onDismissRequest = controller::dismissReleaseNotesDialog,
+                confirmButton = {
+                    TextButton(onClick = controller::dismissReleaseNotesDialog) {
+                        Text("확인")
+                    }
+                },
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("이번 버전에서 달라진 점")
+                        Text(
+                            text = "v${releaseNote.version}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(releaseNote.title)
+
+                        releaseNote.items.forEach { item ->
+                            Text("• $item")
+                        }
+                    }
+                }
+            )
+        }
+
         Column(
             modifier = Modifier.fillMaxSize()
         ) {

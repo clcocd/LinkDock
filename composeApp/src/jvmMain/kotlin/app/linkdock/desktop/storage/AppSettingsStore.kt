@@ -26,6 +26,8 @@ class AppSettingsStore(
 
             AppSettings(
                 lastSavePath = props.getProperty("lastSavePath")
+                    ?.takeIf { it.isNotBlank() },
+                lastSeenReleaseNotesVersion = props.getProperty("lastSeenReleaseNotesVersion")
                     ?.takeIf { it.isNotBlank() }
             )
         } catch (_: Exception) {
@@ -43,6 +45,10 @@ class AppSettingsStore(
                 settings.lastSavePath
                     ?.takeIf { it.isNotBlank() }
                     ?.let { setProperty("lastSavePath", it) }
+
+                settings.lastSeenReleaseNotesVersion
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { setProperty("lastSeenReleaseNotesVersion", it) }
             }
 
             Files.newOutputStream(path).use { props.store(it, null) }

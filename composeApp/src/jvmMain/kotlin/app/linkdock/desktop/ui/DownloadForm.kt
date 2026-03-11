@@ -10,7 +10,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
-import app.linkdock.desktop.download.getServiceUrlGuideText
+import app.linkdock.desktop.download.getServiceUrlHintMessage
 import app.linkdock.desktop.download.getServiceUrlPlaceholder
 import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
 
@@ -70,7 +70,15 @@ private fun InputCard(
     val urlHangulRejected = uiState.hangulRejectedField == HangulRejectedField.URL
     val unsupportedUrlMessage =
         getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
-    val urlUnsupported = uiState.url.isNotBlank() && unsupportedUrlMessage != null
+
+    val inputHintMessage =
+        if (urlHangulRejected) {
+            "URL에는 한글을 사용할 수 없습니다. 브라우저 주소창의 영문 주소를 그대로 붙여넣어 주세요."
+        } else {
+            getServiceUrlHintMessage(uiState.selectedService, uiState.url)
+        }
+
+    val inputHintIsError = urlHangulRejected || unsupportedUrlMessage != null
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -154,19 +162,10 @@ private fun InputCard(
                     placeholder = {
                         Text(getServiceUrlPlaceholder(uiState.selectedService))
                     },
-                    supportingText = {
-                        Text(
-                            if (urlHangulRejected) {
-                                "브라우저 주소창에서 복사한 영문 URL만 입력하세요."
-                            } else {
-                                getServiceUrlGuideText(uiState.selectedService, uiState.url)
-                            }
-                        )
-                    },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    isError = urlHangulRejected || urlUnsupported
+                    isError = inputHintIsError
                 )
 
                 OutlinedTextField(
@@ -190,6 +189,17 @@ private fun InputCard(
                     }
                 )
             }
+
+            Text(
+                text = inputHintMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (inputHintIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+
         }
     }
 }

@@ -13,7 +13,7 @@ fun main() = application {
 
 
     val windowState = rememberWindowState(
-        size = DpSize(1080.dp, 637.dp)
+        size = DpSize(1080.dp, 665.dp)
     )
 
     Window(
@@ -22,7 +22,7 @@ fun main() = application {
         state = windowState
     ){
         LaunchedEffect(Unit) {
-            window.minimumSize = Dimension(900, 637)
+            window.minimumSize = Dimension(900, 665)
         }
 
         App()

@@ -4,6 +4,7 @@ import app.linkdock.desktop.domain.OsType
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadProgressInfo
+import app.linkdock.desktop.release.ReleaseNoteEntry
 
 enum class EnvironmentSource {
     UNKNOWN,
@@ -55,5 +56,6 @@ data class AppUiState(
     val lastEnvironmentCheckedAtEpochMillis: Long? = null,
 
     val statusMessage: String = "대기 중",
-    val logs: List<String> = listOf("LinkDock 시작됨")
+    val logs: List<String> = listOf("LinkDock 시작됨"),
+    val releaseNoteToShow: ReleaseNoteEntry? = null
 )
