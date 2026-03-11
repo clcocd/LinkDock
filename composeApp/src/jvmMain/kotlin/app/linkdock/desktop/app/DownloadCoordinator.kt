@@ -79,15 +79,6 @@ class DownloadCoordinator(
                 current.copy(statusMessage = "URL 필요")
             }
 
-            if (state.url.isBlank()) {
-                startNewLogSession("다운로드 시작 실패")
-                appendLog("URL이 비어 있습니다.")
-                updateState { current ->
-                    current.copy(statusMessage = "URL 필요")
-                }
-                return
-            }
-
             return
         }
 
