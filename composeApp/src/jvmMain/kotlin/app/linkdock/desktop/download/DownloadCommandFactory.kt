@@ -30,7 +30,7 @@ class DownloadCommandFactory(
 
         val outputTemplate = when (prepared.selectedService) {
             ServiceType.ZAN -> File(outputDir, "{title}.mp4").path
-            ServiceType.SPWN -> File(outputDir, "{time:%Y-%m-%d} {title}.mp4").path
+            ServiceType.SPWN -> File(outputDir, buildSpwnOutputTemplate(state)).path
         }
 
         val streamSelection = streamSelectionOverride ?: state.quality
@@ -115,6 +115,25 @@ class DownloadCommandFactory(
             normalizedUrl = normalizedUrl,
             baseCommand = baseCommand
         )
+    }
+
+    private fun buildSpwnOutputTemplate(state: AppUiState): String {
+        val selectedPartSuffix = state.selectedSpwnPartLabel
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::sanitizeFileNameSegment)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { " - $it" }
+            .orEmpty()
+
+        return "{time:%Y-%m-%d} {title}$selectedPartSuffix.mp4"
+    }
+
+    private fun sanitizeFileNameSegment(value: String): String {
+        return value
+            .replace(Regex("""[\\/:*?"<>|]"""), " ")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+            .trimEnd('.')
     }
 
     private data class PreparedDownloadCommand(
