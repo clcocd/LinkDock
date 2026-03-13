@@ -17,7 +17,6 @@ data class SpwnPartOption(
 
 object SpwnProbeParser {
 
-    private val availableStreamsRegex = Regex("""Available streams:\s*(.+)$""")
     private val multiPartEventRegex = Regex("""Multi-part event:\s*(part\d+)\s*\((.+)\)\s*$""")
     private val partStreamRegex = Regex("""^(part\d+)_(.+)$""")
     private val resolutionRegex = Regex("""_(\d+)p$""", RegexOption.IGNORE_CASE)
@@ -59,14 +58,41 @@ object SpwnProbeParser {
     }
 
     private fun parseAvailableStreamKeys(lines: List<String>): List<String> {
-        val availableLine = lines.lastOrNull { it.contains("Available streams:") }
-            ?: return emptyList()
+        val startIndex = lines.indexOfLast { it.contains("Available streams:") }
+        if (startIndex == -1) return emptyList()
 
-        val match = availableStreamsRegex.find(availableLine) ?: return emptyList()
+        val collected = StringBuilder()
+        collected.append(lines[startIndex].substringAfter("Available streams:").trim())
 
-        return match.groupValues[1]
+        if (!collected.contains("(best)", ignoreCase = true)) {
+            for (index in (startIndex + 1) until lines.size) {
+                val continuation = lines[index].trim()
+
+                if (continuation.isBlank()) {
+                    continue
+                }
+
+                val startsNewLogEntry =
+                    continuation.startsWith("[") ||
+                            continuation.contains("error", ignoreCase = true)
+
+                if (startsNewLogEntry) {
+                    break
+                }
+
+                collected.append(" ")
+                collected.append(continuation)
+
+                if (collected.contains("(best)", ignoreCase = true)) {
+                    break
+                }
+            }
+        }
+
+        return collected.toString()
             .split(",")
             .map { it.trim() }
+            .map { it.substringBefore(" (").trim() }
             .filter { it.isNotBlank() }
             .filter { partStreamRegex.matches(it) }
     }
