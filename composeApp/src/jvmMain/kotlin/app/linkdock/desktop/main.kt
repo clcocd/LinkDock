@@ -13,9 +13,9 @@ fun main() = application {
 
     val defaultWindowWidth = 960.dp
     val defaultWindowHeight = when {
-        osName.contains("win") -> 782.dp
-        osName.contains("mac") || osName.contains("darwin") -> 770.dp
-        else -> 770.dp
+        osName.contains("win") -> 777.dp
+        osName.contains("mac") || osName.contains("darwin") -> 765.dp
+        else -> 765.dp
     }
 
     val defaultWindowSize = DpSize(
