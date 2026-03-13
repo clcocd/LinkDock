@@ -7,6 +7,7 @@ import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
 import app.linkdock.desktop.platform.PlatformResolver
+import app.linkdock.desktop.download.SpwnPartOption
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -114,7 +115,7 @@ class AppController {
     }
 
     private fun isInputLocked(state: AppUiState = _uiState.value): Boolean {
-        return state.isDownloading || state.isInstalling || state.isCheckingEnvironment
+        return state.isPreparingDownload || state.isDownloading || state.isInstalling || state.isCheckingEnvironment
     }
 
     private fun removeHangul(value: String): String {
@@ -183,6 +184,10 @@ class AppController {
         _uiState.value = current.copy(
             selectedService = serviceType,
             logs = listOf("${serviceType.displayName} 로그 세션 시작"),
+            showSpwnPartSelector = false,
+            spwnPartOptions = emptyList(),
+            selectedSpwnPartStreamKey = null,
+            selectedSpwnPartLabel = null
         )
     }
 
@@ -233,7 +238,11 @@ class AppController {
                 field = HangulRejectedField.URL,
                 original = value,
                 sanitized = sanitized
-            )
+            ),
+            showSpwnPartSelector = false,
+            spwnPartOptions = emptyList(),
+            selectedSpwnPartStreamKey = null,
+            selectedSpwnPartLabel = null
         )
     }
 
@@ -260,6 +269,15 @@ class AppController {
 
     fun startDownload() {
         downloadCoordinator.startDownload()
+    }
+
+    fun selectSpwnPart(option: SpwnPartOption) {
+        _uiState.update { current ->
+            current.copy(
+                selectedSpwnPartStreamKey = option.bestStreamKey,
+                selectedSpwnPartLabel = option.displayLabel
+            )
+        }
     }
 
     fun stopDownload() {

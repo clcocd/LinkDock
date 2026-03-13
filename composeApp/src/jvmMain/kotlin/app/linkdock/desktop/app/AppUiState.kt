@@ -5,6 +5,7 @@ import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
 import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.release.ReleaseNoteEntry
+import app.linkdock.desktop.download.SpwnPartOption
 
 enum class EnvironmentSource {
     UNKNOWN,
@@ -39,6 +40,7 @@ data class AppUiState(
     val hangulRejectedField: HangulRejectedField? = null,
     val outputDir: String = "",
     val quality: String = "best",
+    val isPreparingDownload: Boolean = false,
     val isDownloading: Boolean = false,
     val isInstalling: Boolean = false,
 
@@ -63,6 +65,10 @@ data class AppUiState(
 
     val statusMessage: String = "대기 중",
     val logs: List<String> = listOf("LinkDock 시작됨"),
+    val showSpwnPartSelector: Boolean = false,
+    val spwnPartOptions: List<SpwnPartOption> = emptyList(),
+    val selectedSpwnPartStreamKey: String? = null,
+    val selectedSpwnPartLabel: String? = null,
     val releaseNoteToShow: ReleaseNoteEntry? = null,
     val releaseNotesDialogMode: ReleaseNotesDialogMode = ReleaseNotesDialogMode.RECENT
 )

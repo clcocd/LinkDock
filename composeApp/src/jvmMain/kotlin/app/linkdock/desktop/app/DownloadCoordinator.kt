@@ -1,8 +1,10 @@
 package app.linkdock.desktop.app
 
 import app.linkdock.desktop.command.CommandRunner
+import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.download.DownloadCommandFactory
 import app.linkdock.desktop.download.DownloadProgressInfo
+import app.linkdock.desktop.download.SpwnProbeParser
 import app.linkdock.desktop.download.StreamlinkProgressParser
 import app.linkdock.desktop.platform.PlatformResolver
 import kotlinx.coroutines.CancellationException
@@ -30,7 +32,7 @@ class DownloadCoordinator(
     fun startDownload() {
         val state = getState()
 
-        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
+        if (state.isPreparingDownload || state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
             appendLog("다른 작업이 진행 중입니다.")
             return
         }
@@ -78,7 +80,6 @@ class DownloadCoordinator(
             updateState { current ->
                 current.copy(statusMessage = "URL 필요")
             }
-
             return
         }
 
@@ -102,7 +103,150 @@ class DownloadCoordinator(
             return
         }
 
-        val buildResult = downloadCommandFactory.build(state)
+        if (shouldRunSpwnProbe(state)) {
+            runSpwnProbe(state)
+            return
+        }
+
+        val finalStreamSelection = state.selectedSpwnPartStreamKey
+        startActualDownload(state, finalStreamSelection)
+    }
+
+    private fun shouldRunSpwnProbe(state: AppUiState): Boolean {
+        return state.selectedService == ServiceType.SPWN &&
+                state.selectedSpwnPartStreamKey == null
+    }
+
+    private fun runSpwnProbe(state: AppUiState) {
+        scope.launch {
+            downloadStopRequested = false
+            currentDownloadProcess = null
+
+            startNewLogSession("SPWN 다운로드 항목 확인")
+            appendLog("다운로드 가능한 항목을 확인하는 중...")
+
+            updateState { current ->
+                current.copy(
+                    isPreparingDownload = true,
+                    statusMessage = "다운로드 가능한 항목을 확인하는 중...",
+                    showSpwnPartSelector = false,
+                    spwnPartOptions = emptyList(),
+                    selectedSpwnPartStreamKey = null,
+                    selectedSpwnPartLabel = null,
+                    downloadProgress = null
+                )
+            }
+
+            try {
+                val buildResult = downloadCommandFactory.buildProbe(state)
+                val command = buildResult.command
+
+                if (command == null) {
+                    appendLog(buildResult.errorMessage ?: "다운로드할 항목 확인을 시작하지 못했습니다.")
+                    setStatus("다운로드 항목 확인 실패")
+                    return@launch
+                }
+
+                val probeLines = mutableListOf<String>()
+
+                val result = commandRunner.runStreamingDownloadCommand(
+                    command = command,
+                    onStdoutLine = { line ->
+                        probeLines += line
+                        if (shouldExposeProbeLine(line)) {
+                            appendLog(line)
+                        }
+                    },
+                    onStderrLine = { line ->
+                        probeLines += line
+                        if (shouldExposeProbeLine(line)) {
+                            appendLog(line)
+                        }
+                    },
+                    onProcessStarted = { process ->
+                        currentDownloadProcess = process
+                    }
+                )
+
+                if (downloadStopRequested) {
+                    setStatus("다운로드 준비 중지됨")
+                    appendLog("다운로드 준비 중지됨")
+                    return@launch
+                }
+
+                if (!result.success && probeLines.none { it.contains("Available streams:") }) {
+                    setStatus("다운로드 항목 확인 실패")
+                    appendLog("다운로드 가능한 항목을 확인하지 못했습니다.")
+                    return@launch
+                }
+
+                val probeResult = SpwnProbeParser.parse(probeLines)
+
+                if (probeResult.isMultiPart && probeResult.options.isNotEmpty()) {
+                    val firstOption = probeResult.options.first()
+
+                    updateState { current ->
+                        current.copy(
+                            isPreparingDownload = false,
+                            showSpwnPartSelector = true,
+                            spwnPartOptions = probeResult.options,
+                            selectedSpwnPartStreamKey = firstOption.bestStreamKey,
+                            selectedSpwnPartLabel = firstOption.displayLabel,
+                            statusMessage = "다운로드할 VOD를 선택해 주세요."
+                        )
+                    }
+
+                    appendLog("여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요.")
+                    appendLog("기본 선택: ${firstOption.displayLabel}")
+                    return@launch
+                }
+
+                updateState { current ->
+                    current.copy(
+                        isPreparingDownload = false,
+                        showSpwnPartSelector = false,
+                        spwnPartOptions = emptyList(),
+                        selectedSpwnPartStreamKey = null,
+                        selectedSpwnPartLabel = null
+                    )
+                }
+
+                startActualDownload(getState(), streamSelectionOverride = null)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val errorMessage = e.message?.takeIf { it.isNotBlank() }
+                    ?: e::class.simpleName
+                    ?: "알 수 없는 오류"
+
+                appendLog("다운로드 항목 확인 중 오류 발생: $errorMessage")
+                setStatus("다운로드 항목 확인 실패")
+            } finally {
+                currentDownloadProcess = null
+                downloadStopRequested = false
+
+                updateState { current ->
+                    if (current.isPreparingDownload) {
+                        current.copy(isPreparingDownload = false)
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+    }
+
+    private fun shouldExposeProbeLine(line: String): Boolean {
+        return line.contains("Multi-part event:") ||
+                line.contains("Available streams:") ||
+                line.contains("error", ignoreCase = true)
+    }
+
+    private fun startActualDownload(
+        state: AppUiState,
+        streamSelectionOverride: String?
+    ) {
+        val buildResult = downloadCommandFactory.build(state, streamSelectionOverride)
         val command = buildResult.command
 
         if (command == null) {
@@ -121,10 +265,15 @@ class DownloadCoordinator(
 
             try {
                 startNewLogSession("다운로드 시작")
-                appendLog("서비스: ${state.selectedService.displayName}")
+                appendLog("서비스: ${state.selectedService?.displayName ?: "알 수 없음"}")
                 appendLog("URL: ${state.url}")
                 appendLog("저장 경로: ${buildResult.resolvedOutputDir}")
-                appendLog("화질: ${state.quality}")
+
+                state.selectedSpwnPartLabel?.let {
+                    appendLog("선택 항목: $it")
+                }
+
+                appendLog("선택 스트림: ${streamSelectionOverride ?: state.quality}")
 
                 updateState { current ->
                     current.copy(
@@ -214,14 +363,26 @@ class DownloadCoordinator(
     fun stopDownload() {
         val state = getState()
 
-        if (!state.isDownloading) {
-            appendLog("중지할 다운로드가 없습니다.")
+        if (!state.isPreparingDownload && !state.isDownloading) {
+            appendLog("중지할 작업이 없습니다.")
             return
         }
 
         downloadStopRequested = true
-        setStatus("다운로드 중지 요청 중...")
-        appendLog("다운로드 중지 요청")
+        setStatus(
+            if (state.isPreparingDownload) {
+                "다운로드 준비 중지 요청 중..."
+            } else {
+                "다운로드 중지 요청 중..."
+            }
+        )
+        appendLog(
+            if (state.isPreparingDownload) {
+                "다운로드 준비 중지 요청"
+            } else {
+                "다운로드 중지 요청"
+            }
+        )
 
         currentDownloadProcess?.destroy()
     }

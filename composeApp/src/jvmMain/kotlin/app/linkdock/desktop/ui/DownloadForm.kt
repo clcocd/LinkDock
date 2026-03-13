@@ -8,6 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.download.getServiceUrlHintMessage
@@ -21,7 +28,7 @@ fun DownloadForm(
     modifier: Modifier = Modifier
 ) {
     val isEditLocked =
-        uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
+        uiState.isPreparingDownload || uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
 
     val isActionLocked =
         isEditLocked || uiState.isRefreshingEnvironment
@@ -30,6 +37,12 @@ fun DownloadForm(
 
     val unsupportedUrlMessage =
         getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
+
+    val requiresSpwnSelection =
+        uiState.showSpwnPartSelector && uiState.spwnPartOptions.isNotEmpty()
+
+    val hasRequiredSpwnSelection =
+        !requiresSpwnSelection || uiState.selectedSpwnPartStreamKey != null
 
     val canStartDownload =
         !isActionLocked &&
@@ -40,7 +53,8 @@ fun DownloadForm(
                 uiState.email.isNotBlank() &&
                 uiState.password.isNotBlank() &&
                 uiState.url.isNotBlank() &&
-                unsupportedUrlMessage == null
+                unsupportedUrlMessage == null &&
+                hasRequiredSpwnSelection
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -72,12 +86,7 @@ private fun InputCard(
     val unsupportedUrlMessage =
         getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
 
-    val inputHintMessage =
-        if (urlHangulRejected) {
-            "URL에는 한글을 사용할 수 없습니다. 브라우저 주소창의 영문 주소를 그대로 붙여넣어 주세요."
-        } else {
-            getServiceUrlHintMessage(uiState.selectedService, uiState.url)
-        }
+    val inputHintMessage = getServiceUrlHintMessage(uiState.selectedService, uiState.url)
 
     val urlIsError = urlHangulRejected || unsupportedUrlMessage != null
 
@@ -201,6 +210,68 @@ private fun InputCard(
                 }
             )
 
+            var expanded by remember(
+                uiState.spwnPartOptions,
+                uiState.selectedSpwnPartStreamKey
+            ) {
+                mutableStateOf(false)
+            }
+
+            val selectedOption = uiState.spwnPartOptions.firstOrNull {
+                it.bestStreamKey == uiState.selectedSpwnPartStreamKey
+            }
+
+            val canSelectSpwnPart =
+                uiState.showSpwnPartSelector &&
+                        uiState.spwnPartOptions.isNotEmpty() &&
+                        !uiState.isPreparingDownload &&
+                        !uiState.isDownloading
+
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedOption?.displayLabel ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    enabled = canSelectSpwnPart,
+                    label = { Text("다운로드할 VOD") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            enabled = canSelectSpwnPart
+                        ) {
+                            expanded = !expanded
+                        }
+                )
+
+                DropdownMenu(
+                    expanded = expanded && canSelectSpwnPart,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    uiState.spwnPartOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.displayLabel) },
+                            onClick = {
+                                controller.selectSpwnPart(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = if (uiState.spwnPartOptions.isNotEmpty()) {
+                    "여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요."
+                } else {
+                    "여러 항목이 있을 경우 다운로드할 항목을 선택할 수 있습니다."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
         }
     }
 }
@@ -238,13 +309,17 @@ private fun ActionCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        if (uiState.isDownloading) "다운로드 중" else "다운로드 시작"
+                        when {
+                            uiState.isPreparingDownload -> "준비 중"
+                            uiState.isDownloading -> "다운로드 중"
+                            else -> "다운로드"
+                        }
                     )
                 }
 
                 OutlinedButton(
                     onClick = controller::stopDownload,
-                    enabled = uiState.isDownloading,
+                    enabled = uiState.isPreparingDownload || uiState.isDownloading,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("중지")
@@ -328,6 +403,12 @@ private fun buildActionHint(uiState: AppUiState): String? {
 
         uiState.isRefreshingEnvironment ->
             "앱 시작 후 환경 정보를 확인 중입니다. 잠시 후 다시 시도해 주세요."
+
+        uiState.showSpwnPartSelector ->
+            "받을 항목을 선택한 뒤 다운로드 버튼을 한 번 더 눌러 주세요."
+
+        uiState.isPreparingDownload ->
+            "다운로드할 항목을 확인하고 있습니다. 잠시만 기다려 주세요."
 
         uiState.isDownloading ->
             "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."

@@ -9,64 +9,14 @@ class DownloadCommandFactory(
     private val platformResolver: PlatformResolver
 ) {
 
-    fun build(state: AppUiState): DownloadCommandBuildResult {
-        val osType = state.osType ?: platformResolver.detectOsType()
-
-        val selectedService = state.selectedService
-            ?: return DownloadCommandBuildResult(
-                command = null,
-                resolvedOutputDir = null,
-                errorMessage = "서비스가 선택되지 않았습니다."
-            )
-
-        val normalizedUrl = state.url.trim()
-
-        val unsupportedUrlMessage = getUnsupportedServiceUrlMessage(selectedService, normalizedUrl)
-        if (unsupportedUrlMessage != null) {
-            return DownloadCommandBuildResult(
-                command = null,
-                resolvedOutputDir = null,
-                errorMessage = unsupportedUrlMessage
-            )
-        }
-
-        val streamlinkExecutable = platformResolver.resolveStreamlinkExecutable(osType)
-            ?: return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = "현재 운영체제에서는 다운로드를 지원하지 않습니다."
-            )
-
-        val ffmpegExecutable = platformResolver.resolveFfmpegExecutable(osType)
-            ?: return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = "FFmpeg 실행 파일 경로를 결정할 수 없습니다."
-            )
-
-        val pluginDir = platformResolver.resolveAppPluginDir(osType)
-            ?: return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = "플러그인 폴더 경로를 결정할 수 없습니다."
-            )
-
-        val selectedPluginFile = platformResolver.resolveManagedPluginFile(osType, selectedService)
-            ?.let(::File)
-            ?: return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = "플러그인 파일 경로를 결정할 수 없습니다."
-            )
-
-        if (!selectedPluginFile.isFile) {
-            return DownloadCommandBuildResult(
-                command = null,
-                errorMessage = when (selectedService) {
-                    ServiceType.ZAN ->
-                        "ZAN 플러그인 파일이 없습니다: ${selectedPluginFile.absolutePath}\n먼저 Streamlink 설치/업데이트를 실행하세요."
-
-                    ServiceType.SPWN ->
-                        "SPWN 플러그인 파일이 없습니다: ${selectedPluginFile.absolutePath}\n먼저 Streamlink 설치/업데이트를 실행하세요."
-                }
-            )
-        }
+    fun build(
+        state: AppUiState,
+        streamSelectionOverride: String? = null
+    ): DownloadCommandBuildResult {
+        val prepared = prepareCommon(state) ?: return DownloadCommandBuildResult(
+            command = null,
+            errorMessage = "다운로드 명령을 준비하지 못했습니다."
+        )
 
         val outputDir = platformResolver.resolveOutputDir(state.outputDir)
 
@@ -78,32 +28,25 @@ class DownloadCommandFactory(
             )
         }
 
-        val outputTemplate = when (selectedService) {
+        val outputTemplate = when (prepared.selectedService) {
             ServiceType.ZAN -> File(outputDir, "{title}.mp4").path
             ServiceType.SPWN -> File(outputDir, "{time:%Y-%m-%d} {title}.mp4").path
         }
 
-        val command = mutableListOf<String>()
-        command += streamlinkExecutable
-        command += listOf("--plugin-dir", pluginDir)
-        command += listOf("--ffmpeg-ffmpeg", ffmpegExecutable)
-
-        when (selectedService) {
-            ServiceType.ZAN -> {
-                command += listOf("--zan-email", state.email)
-                command += listOf("--zan-password", state.password)
-            }
-
-            ServiceType.SPWN -> {
-                command += listOf("--spwn-email", state.email)
-                command += listOf("--spwn-password", state.password)
-            }
+        val streamSelection = streamSelectionOverride ?: state.quality
+        if (streamSelection.isBlank()) {
+            return DownloadCommandBuildResult(
+                command = null,
+                resolvedOutputDir = outputDir,
+                errorMessage = "스트림 선택 값을 결정하지 못했습니다."
+            )
         }
 
+        val command = prepared.baseCommand.toMutableList()
         command += "--progress=force"
         command += "--skip"
-        command += normalizedUrl
-        command += state.quality
+        command += prepared.normalizedUrl
+        command += streamSelection
         command += listOf("-o", outputTemplate)
 
         return DownloadCommandBuildResult(
@@ -111,4 +54,72 @@ class DownloadCommandFactory(
             resolvedOutputDir = outputDir
         )
     }
+
+    fun buildProbe(state: AppUiState): DownloadCommandBuildResult {
+        val prepared = prepareCommon(state) ?: return DownloadCommandBuildResult(
+            command = null,
+            errorMessage = "SPWN 확인용 명령을 준비하지 못했습니다."
+        )
+
+        val command = prepared.baseCommand.toMutableList()
+        command += prepared.normalizedUrl
+
+        return DownloadCommandBuildResult(
+            command = command,
+            resolvedOutputDir = null
+        )
+    }
+
+    private fun prepareCommon(state: AppUiState): PreparedDownloadCommand? {
+        val osType = state.osType ?: platformResolver.detectOsType()
+
+        val selectedService = state.selectedService ?: return null
+
+        val normalizedUrl = state.url.trim()
+        val unsupportedUrlMessage = getUnsupportedServiceUrlMessage(selectedService, normalizedUrl)
+        if (unsupportedUrlMessage != null) {
+            return null
+        }
+
+        val streamlinkExecutable = platformResolver.resolveStreamlinkExecutable(osType) ?: return null
+        val ffmpegExecutable = platformResolver.resolveFfmpegExecutable(osType) ?: return null
+        val pluginDir = platformResolver.resolveAppPluginDir(osType) ?: return null
+
+        val selectedPluginFile = platformResolver.resolveManagedPluginFile(osType, selectedService)
+            ?.let(::File)
+            ?: return null
+
+        if (!selectedPluginFile.isFile) {
+            return null
+        }
+
+        val baseCommand = mutableListOf<String>()
+        baseCommand += streamlinkExecutable
+        baseCommand += listOf("--plugin-dir", pluginDir)
+        baseCommand += listOf("--ffmpeg-ffmpeg", ffmpegExecutable)
+
+        when (selectedService) {
+            ServiceType.ZAN -> {
+                baseCommand += listOf("--zan-email", state.email)
+                baseCommand += listOf("--zan-password", state.password)
+            }
+
+            ServiceType.SPWN -> {
+                baseCommand += listOf("--spwn-email", state.email)
+                baseCommand += listOf("--spwn-password", state.password)
+            }
+        }
+
+        return PreparedDownloadCommand(
+            selectedService = selectedService,
+            normalizedUrl = normalizedUrl,
+            baseCommand = baseCommand
+        )
+    }
+
+    private data class PreparedDownloadCommand(
+        val selectedService: ServiceType,
+        val normalizedUrl: String,
+        val baseCommand: List<String>
+    )
 }
