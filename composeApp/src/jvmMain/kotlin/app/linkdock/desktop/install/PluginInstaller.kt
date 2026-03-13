@@ -86,12 +86,6 @@ class PluginInstaller(
                 }
 
                 tempFile.copyTo(targetFile, overwrite = true)
-
-                if (backupFile.isFile) {
-                    backupFile.delete()
-                }
-
-                tempFile.copyTo(targetFile, overwrite = true)
                 hasChanges = true
 
                 if (backupFile.isFile) {
