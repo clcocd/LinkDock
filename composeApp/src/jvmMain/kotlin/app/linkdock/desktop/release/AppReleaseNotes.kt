@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10.2",
+            title = "다운로드 파일을 더 알아보기 쉽게 정리했습니다.",
+            items = listOf(
+                "여러 항목이 있는 VOD에서 선택한 항목 이름이 저장 파일명에 함께 반영되도록 개선했습니다.",
+                "다운로드 후에도 어떤 항목을 받았는지 파일명만 보고 더 쉽게 구분할 수 있습니다.",
+                "선택한 항목이 다른 경우 저장 파일명이 겹쳐 보이던 흐름을 줄이도록 정리했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.10.1",
             title = "윈도우 환경에서 Streamlink 상태 확인 흐름을 더 정확하게 다듬었습니다.",
             items = listOf(
