@@ -236,9 +236,13 @@ private fun InputCard(
                     readOnly = true,
                     singleLine = true,
                     enabled = canSelectSpwnPart,
-                    label = { Text("다운로드할 VOD") },
+                    label = { Text("다운로드 VOD") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .matchParentSize()
                         .clickable(
                             enabled = canSelectSpwnPart
                         ) {
