@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10.1",
+            title = "윈도우 환경에서 Streamlink 상태 확인 흐름을 더 정확하게 다듬었습니다.",
+            items = listOf(
+                "업데이트가 필요 없는 경우에도 실패로 보이던 문제를 수정했습니다.",
+                "Streamlink가 이미 최신 상태일 때 상태 안내가 실제 상황에 맞게 표시되도록 보완했습니다.",
+                "환경 및 실행 상태 문구가 더 자연스럽게 이어지도록 정리했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.10",
             title = "SPWN 멀티파트 선택과 다운로드 안내 흐름을 더 자연스럽게 정리했습니다.",
             items = listOf(
