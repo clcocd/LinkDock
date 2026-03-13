@@ -501,14 +501,16 @@ class StreamlinkInstaller(
     ): InstallationOutcome? {
         val output = result.fullOutput.lowercase()
 
-        if (
-            alreadyInstalled &&
-            (
-                    "no available upgrade found" in output ||
-                            "no newer package versions are available" in output ||
-                            "no applicable upgrade found" in output
-                    )
-        ) {
+        val noUpgradeMessages = listOf(
+            "no available upgrade found",
+            "no newer package versions are available",
+            "no applicable upgrade found",
+            "사용 가능한 업그레이드를 찾을 수 없습니다",
+            "구성된 원본에서 사용할 수 있는 최신 패키지 버전이 없습니다",
+            "적용 가능한 업그레이드를 찾을 수 없습니다"
+        )
+
+        if (alreadyInstalled && noUpgradeMessages.any { it.lowercase() in output }) {
             return InstallationOutcome.ALREADY_LATEST
         }
 
