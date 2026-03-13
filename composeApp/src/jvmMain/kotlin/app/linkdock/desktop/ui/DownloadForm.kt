@@ -79,7 +79,7 @@ private fun InputCard(
             getServiceUrlHintMessage(uiState.selectedService, uiState.url)
         }
 
-    val inputHintIsError = urlHangulRejected || unsupportedUrlMessage != null
+    val urlIsError = urlHangulRejected || unsupportedUrlMessage != null
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -121,7 +121,7 @@ private fun InputCard(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    isError = inputHintIsError
+                    isError = emailHangulRejected
                 )
 
                 OutlinedTextField(
@@ -166,7 +166,7 @@ private fun InputCard(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     enabled = canEditFields,
-                    isError = inputHintIsError
+                    isError = urlIsError
                 )
 
                 OutlinedTextField(
@@ -191,17 +191,15 @@ private fun InputCard(
                 )
             }
 
-            inputHintMessage.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (inputHintIsError) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
+            Text(
+                text = inputHintMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (urlIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
 
         }
     }
@@ -325,19 +323,28 @@ private fun buildActionHint(uiState: AppUiState): String? {
         uiState.isCheckingEnvironment ->
             "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."
 
+        uiState.isRefreshingEnvironment && uiState.environmentSource == EnvironmentSource.CACHED ->
+            "저장된 환경 정보를 표시 중입니다. 백그라운드에서 현재 상태를 다시 확인하고 있으니 잠시만 기다려 주세요."
+
+        uiState.isRefreshingEnvironment ->
+            "앱 시작 후 환경 정보를 확인 중입니다. 잠시 후 다시 시도해 주세요."
+
         uiState.isDownloading ->
             "다운로드 진행 중입니다. 중지 버튼만 사용할 수 있습니다."
 
         uiState.isInstalling ->
             "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
 
+        uiState.environmentSource != EnvironmentSource.VERIFIED ->
+            "다운로드 전에 위의 '환경 및 실행 상태' 영역에서 설치 확인을 먼저 실행해 주세요."
+
         uiState.selectedService == null ->
             "먼저 서비스를 선택하세요."
 
-        uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasStreamlink ->
+        !uiState.hasStreamlink ->
             "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
 
-        uiState.environmentSource == EnvironmentSource.VERIFIED && !uiState.hasFfmpeg ->
+        !uiState.hasFfmpeg ->
             "FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
 
         uiState.email.isBlank() ->

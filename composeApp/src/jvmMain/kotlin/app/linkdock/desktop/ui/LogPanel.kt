@@ -190,6 +190,12 @@ fun LogPanel(
 }
 
 private fun buildEnvironmentSummary(uiState: AppUiState): String = when {
+    uiState.environmentSource == EnvironmentSource.CACHED && uiState.isRefreshingEnvironment ->
+        "저장된 환경 정보를 표시 중이며, 백그라운드에서 현재 상태를 다시 확인하고 있습니다."
+
+    uiState.environmentSource == EnvironmentSource.CACHED ->
+        "저장된 환경 정보를 표시 중입니다. 설치 확인으로 현재 상태를 다시 확인할 수 있습니다."
+
     uiState.environmentSource != EnvironmentSource.VERIFIED ->
         "아직 확인된 환경 정보가 없습니다. 설치 확인으로 현재 상태를 다시 확인하세요."
 
@@ -199,11 +205,17 @@ private fun buildEnvironmentSummary(uiState: AppUiState): String = when {
     uiState.osType == OsType.UNSUPPORTED ->
         "지원하지 않는 운영체제입니다."
 
-    uiState.hasStreamlink ->
-        "Streamlink가 설치된 것으로 확인되었습니다."
+    uiState.hasStreamlink && uiState.hasFfmpeg ->
+        "Streamlink와 FFmpeg가 설치된 것으로 확인되었습니다."
+
+    uiState.hasStreamlink && !uiState.hasFfmpeg ->
+        "Streamlink는 확인되었지만 FFmpeg가 감지되지 않았습니다."
+
+    !uiState.hasStreamlink && uiState.hasFfmpeg ->
+        "FFmpeg는 확인되었지만 Streamlink가 감지되지 않았습니다."
 
     else ->
-        "Streamlink가 감지되지 않았습니다."
+        "Streamlink와 FFmpeg가 모두 감지되지 않았습니다."
 }
 
 private fun buildExecutionSummary(uiState: AppUiState): String = when {
