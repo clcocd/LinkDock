@@ -105,11 +105,53 @@ class EnvironmentInspector(
             return "$label 설치됨"
         }
 
+        if (label.equals("FFmpeg", ignoreCase = true)) {
+            extractFfmpegVersion(line)?.let { version ->
+                return "$label $version"
+            }
+
+            extractFfmpegFallbackToken(line)?.let { token ->
+                return "$label $token"
+            }
+
+            return "$label 설치됨"
+        }
+
         return if (line.startsWith(label, ignoreCase = true)) {
             val suffix = line.substring(label.length).trim()
             if (suffix.isBlank()) label else "$label $suffix"
         } else {
             "$label $line"
         }
+    }
+
+    private fun extractFfmpegVersion(line: String): String? {
+        return FFMPEG_VERSION_REGEX
+            .find(line)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun extractFfmpegFallbackToken(line: String): String? {
+        val normalized = line.trim()
+        val prefix = "ffmpeg version "
+
+        if (!normalized.startsWith(prefix, ignoreCase = true)) {
+            return null
+        }
+
+        val remainder = normalized.substring(prefix.length).trim()
+        if (remainder.isBlank()) {
+            return null
+        }
+
+        val firstToken = remainder.substringBefore(" ").trim()
+        return firstToken.takeIf { it.isNotBlank() }?.take(32)
+    }
+
+    companion object {
+        private val FFMPEG_VERSION_REGEX =
+            Regex("""(?i)\bffmpeg version\s+n?([0-9]+(?:\.[0-9]+)+)""")
     }
 }
