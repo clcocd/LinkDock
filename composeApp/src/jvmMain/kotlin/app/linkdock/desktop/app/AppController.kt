@@ -3,7 +3,6 @@ package app.linkdock.desktop.app
 import app.linkdock.desktop.command.CommandRunner
 import app.linkdock.desktop.domain.ServiceType
 import app.linkdock.desktop.domain.ThemeMode
-import app.linkdock.desktop.install.PluginInstallOutcome
 import app.linkdock.desktop.install.PluginInstaller
 import app.linkdock.desktop.install.StreamlinkInstaller
 import app.linkdock.desktop.platform.DirectoryPicker
@@ -300,21 +299,12 @@ class AppController {
                     setStatus(pluginResult.completionMessage)
                     shouldRunSilentEnvironmentRefresh = true
                 } else {
-                    val pluginStatus = when (pluginResult.outcome) {
-                        PluginInstallOutcome.UPDATED -> "플러그인 업데이트가 완료되었습니다."
-                        PluginInstallOutcome.NO_CHANGES -> "플러그인 확인이 완료되었습니다."
-                        null -> null
-                    }
-
                     val finalStatus = buildString {
                         append(streamlinkResult.completionMessage)
-                        if (!pluginStatus.isNullOrBlank()) {
-                            append("\n")
-                            append(pluginStatus)
-                        }
+                        append("\n")
+                        append(pluginResult.completionMessage)
                     }
 
-                    appendLog(finalStatus)
                     setStatus(finalStatus)
                 }
             } catch (e: CancellationException) {
