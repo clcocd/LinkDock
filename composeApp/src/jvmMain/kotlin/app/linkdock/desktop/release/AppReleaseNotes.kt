@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.8.7",
+            title = "입력 오류 표시와 상태 안내를 더 정확하게 다듬었습니다.",
+            items = listOf(
+                "URL 입력 오류가 다른 입력칸에 잘못 표시되지 않도록 정리했습니다.",
+                "다운로드를 시작할 수 없는 경우 필요한 다음 행동을 더 알기 쉽게 안내합니다.",
+                "환경 상태 요약에서 Streamlink와 FFmpeg 상태를 더 정확하게 확인할 수 있습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.8.6",
             title = "앱 내부 흐름을 더 안정적으로 정리했습니다.",
             items = listOf(
