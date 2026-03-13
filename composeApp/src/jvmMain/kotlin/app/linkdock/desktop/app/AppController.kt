@@ -169,7 +169,6 @@ class AppController {
         _uiState.value = current.copy(
             selectedService = serviceType,
             logs = listOf("${serviceType.displayName} 로그 세션 시작"),
-            statusMessage = "${serviceType.displayName} 선택됨"
         )
     }
 
