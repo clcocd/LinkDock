@@ -226,9 +226,9 @@ private fun buildExecutionSummary(uiState: AppUiState): String {
     return when {
         uiState.downloadProgress != null -> uiState.downloadProgress.toDisplayText()
         uiState.installProgressText != null -> uiState.installProgressText
-        uiState.isCheckingEnvironment -> "설치 상태 확인 중입니다."
-        uiState.isDownloading -> "진행 정보 수신 대기 중..."
-        uiState.isInstalling -> "설치 또는 업데이트 작업이 실행 중입니다."
+        uiState.isCheckingEnvironment -> currentStatusMessage ?: "설치 상태 확인 중입니다."
+        uiState.isDownloading -> currentStatusMessage ?: "진행 정보 수신 대기 중..."
+        uiState.isInstalling -> currentStatusMessage ?: "설치 또는 업데이트 작업이 실행 중입니다."
         currentStatusMessage != null -> currentStatusMessage
         else -> "현재 실행 중인 작업은 없습니다."
     }
