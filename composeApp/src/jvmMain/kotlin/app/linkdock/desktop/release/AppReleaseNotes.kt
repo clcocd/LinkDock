@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10",
+            title = "SPWN 멀티파트 선택과 다운로드 안내 흐름을 더 자연스럽게 정리했습니다.",
+            items = listOf(
+                "여러 항목이 있는 SPWN VOD에서 받을 항목을 화면에서 선택할 수 있도록 개선했습니다.",
+                "항목 확인, 선택, 다운로드로 이어지는 흐름을 정리해 다음 행동을 더 알기 쉽게 안내합니다.",
+                "버튼, 상태 문구, 안내 메시지를 다듬어 전체 다운로드 흐름이 더 자연스럽게 보이도록 정리했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.9",
             title = "설치와 상태 확인 흐름을 더 안정적으로 정리했습니다.",
             items = listOf(
