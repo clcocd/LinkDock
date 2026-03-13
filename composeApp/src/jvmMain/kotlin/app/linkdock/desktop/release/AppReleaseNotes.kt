@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10.4",
+            title = "VOD 선택 드롭다운의 사용성을 더 자연스럽게 다듬었습니다.",
+            items = listOf(
+                "다운로드할 VOD 선택 필드의 클릭 영역을 개선해 더 쉽게 열 수 있도록 정리했습니다.",
+                "드롭다운 메뉴 폭과 선택 영역을 다듬어 항목을 더 편하게 고를 수 있습니다.",
+                "VOD 선택 UI가 윈도우 환경에서도 더 자연스럽게 보이도록 보완했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.10.3",
             title = "다운로드의 품질 선택을 더 안정적으로 개선했습니다.",
             items = listOf(
