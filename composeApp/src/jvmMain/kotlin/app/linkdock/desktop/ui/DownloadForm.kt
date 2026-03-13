@@ -3,6 +3,12 @@ package app.linkdock.desktop.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,11 +18,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
+import app.linkdock.desktop.download.SpwnPartOption
 import app.linkdock.desktop.download.getServiceUrlHintMessage
 import app.linkdock.desktop.download.getServiceUrlPlaceholder
 import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
@@ -87,6 +97,37 @@ private fun InputCard(
         getUnsupportedServiceUrlMessage(uiState.selectedService, uiState.url)
 
     val inputHintMessage = getServiceUrlHintMessage(uiState.selectedService, uiState.url)
+
+    val debugUseFakeSpwnOptions = false
+
+    val debugSpwnPartOptions = if (debugUseFakeSpwnOptions) {
+        listOf(
+            SpwnPartOption(
+                displayLabel = "Stage 1",
+                bestStreamKey = "part3_1080p",
+                partKey = "part3",
+                rawLabel = "rgrp5/stage1_v1 [VOD]",
+                originalOrder = 0
+            ),
+            SpwnPartOption(
+                displayLabel = "Stage 2",
+                bestStreamKey = "part4_1080p",
+                partKey = "part4",
+                rawLabel = "rgrp5/stage2_v1 [VOD]",
+                originalOrder = 1
+            )
+        )
+    } else {
+        emptyList()
+    }
+
+    val effectiveSpwnPartOptions =
+        uiState.spwnPartOptions.ifEmpty {
+            debugSpwnPartOptions
+        }
+
+    val effectiveShowSpwnPartSelector =
+        uiState.showSpwnPartSelector || effectiveSpwnPartOptions.isNotEmpty()
 
     val urlIsError = urlHangulRejected || unsupportedUrlMessage != null
 
@@ -211,24 +252,31 @@ private fun InputCard(
             )
 
             var expanded by remember(
-                uiState.spwnPartOptions,
+                effectiveSpwnPartOptions,
                 uiState.selectedSpwnPartStreamKey
             ) {
                 mutableStateOf(false)
             }
 
-            val selectedOption = uiState.spwnPartOptions.firstOrNull {
+            val selectedOption = effectiveSpwnPartOptions.firstOrNull {
                 it.bestStreamKey == uiState.selectedSpwnPartStreamKey
-            }
+            } ?: effectiveSpwnPartOptions.firstOrNull()
 
             val canSelectSpwnPart =
-                uiState.showSpwnPartSelector &&
-                        uiState.spwnPartOptions.isNotEmpty() &&
+                effectiveShowSpwnPartSelector &&
+                        effectiveSpwnPartOptions.isNotEmpty() &&
                         !uiState.isPreparingDownload &&
                         !uiState.isDownloading
 
+            val density = LocalDensity.current
+            var spwnSelectorWidthPx by remember { mutableIntStateOf(0) }
+
             Box(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        spwnSelectorWidthPx = coordinates.size.width
+                    }
             ) {
                 OutlinedTextField(
                     value = selectedOption?.displayLabel ?: "",
@@ -237,33 +285,75 @@ private fun InputCard(
                     singleLine = true,
                     enabled = canSelectSpwnPart,
                     label = { Text("다운로드 VOD") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = canSelectSpwnPart
+                    trailingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(width = 38.dp, height = 32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (canSelectSpwnPart) {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
+                            Icon(
+                                imageVector = if (expanded) {
+                                    Icons.Default.ArrowDropUp
+                                } else {
+                                    Icons.Default.ArrowDropDown
+                                },
+                                contentDescription = "다운로드 VOD 선택",
+                                modifier = Modifier.size(24.dp),
+                                tint = if (canSelectSpwnPart) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                }
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(enabled = canSelectSpwnPart) {
                             expanded = !expanded
                         }
                 )
 
                 DropdownMenu(
                     expanded = expanded && canSelectSpwnPart,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.width(
+                        with(density) { spwnSelectorWidthPx.toDp() }
+                    )
                 ) {
-                    uiState.spwnPartOptions.forEach { option ->
+                    effectiveSpwnPartOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.displayLabel) },
+                            text = {
+                                Text(
+                                    text = option.displayLabel,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            },
                             onClick = {
                                 controller.selectSpwnPart(option)
                                 expanded = false
-                            }
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
 
             Text(
-                text = if (uiState.spwnPartOptions.isNotEmpty()) {
+                text = if (effectiveSpwnPartOptions.isNotEmpty()) {
                     "여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요."
                 } else {
                     "여러 항목이 있을 경우 다운로드할 항목을 선택할 수 있습니다."
