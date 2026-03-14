@@ -31,7 +31,10 @@ fun MainScreen(
     val uiState by controller.uiState.collectAsState()
 
     val isEditLocked =
-        uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
+        uiState.isPreparingDownload ||
+                uiState.isDownloading ||
+                uiState.isInstalling ||
+                uiState.isCheckingEnvironment
 
     val isActionLocked =
         isEditLocked || uiState.isRefreshingEnvironment

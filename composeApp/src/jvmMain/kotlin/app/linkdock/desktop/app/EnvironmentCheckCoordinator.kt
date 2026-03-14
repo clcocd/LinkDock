@@ -59,7 +59,8 @@ class EnvironmentCheckCoordinator(
                 val environmentCheckRunning = environmentCheckJob?.isActive == true
 
                 val busy =
-                    state.isDownloading ||
+                    state.isPreparingDownload ||
+                            state.isDownloading ||
                             state.isInstalling ||
                             state.isCheckingEnvironment ||
                             state.isRefreshingEnvironment ||
@@ -133,7 +134,8 @@ class EnvironmentCheckCoordinator(
                         previousEnvironmentCheckJob !== coroutineContext[Job]
 
             val busy =
-                state.isDownloading ||
+                state.isPreparingDownload ||
+                        state.isDownloading ||
                         state.isInstalling ||
                         state.isCheckingEnvironment ||
                         state.isRefreshingEnvironment ||

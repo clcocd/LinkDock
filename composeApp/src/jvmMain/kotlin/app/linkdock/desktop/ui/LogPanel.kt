@@ -45,7 +45,10 @@ fun LogPanel(
     val environmentSummary = buildEnvironmentSummary(uiState)
     val executionSummary = buildExecutionSummary(uiState)
     val isTaskRunning =
-        uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
+        uiState.isPreparingDownload ||
+                uiState.isDownloading ||
+                uiState.isInstalling ||
+                uiState.isCheckingEnvironment
 
     val installButtonText = when {
         uiState.isInstalling -> "진행 중"

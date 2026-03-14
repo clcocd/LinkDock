@@ -23,7 +23,13 @@ class InstallationCoordinator(
     fun installOrUpdateStreamlink() {
         val state = getState()
 
-        if (state.isDownloading || state.isInstalling || state.isCheckingEnvironment || state.isRefreshingEnvironment) {
+        if (
+            state.isPreparingDownload ||
+            state.isDownloading ||
+            state.isInstalling ||
+            state.isCheckingEnvironment ||
+            state.isRefreshingEnvironment
+        ) {
             appendLog("다른 작업이 진행 중입니다.")
             return
         }
