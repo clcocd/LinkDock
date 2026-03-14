@@ -86,7 +86,7 @@ class DownloadCoordinator(
         if (!state.hasStreamlink) {
             startNewLogSession("다운로드 시작 실패")
             appendLog("Streamlink가 현재 앱에서 인식되지 않습니다.")
-            appendLog("먼저 설치하거나 앱을 다시 시작한 뒤 다시 시도해주세요.")
+            appendLog("먼저 설치하거나 앱을 다시 시작한 뒤 시도해 주세요.")
             updateState { current ->
                 current.copy(statusMessage = "Streamlink 필요")
             }
@@ -96,7 +96,7 @@ class DownloadCoordinator(
         if (!state.hasFfmpeg) {
             startNewLogSession("다운로드 시작 실패")
             appendLog("FFmpeg가 현재 앱에서 인식되지 않습니다.")
-            appendLog("먼저 설치/업데이트를 실행하거나 앱을 다시 시작한 뒤 다시 시도해주세요.")
+            appendLog("먼저 설치/업데이트를 실행하거나 앱을 다시 시작한 뒤 시도해 주세요.")
             updateState { current ->
                 current.copy(statusMessage = "FFmpeg 필요")
             }
