@@ -183,12 +183,8 @@ class AppController {
 
         _uiState.value = current.copy(
             selectedService = serviceType,
-            logs = listOf("${serviceType.displayName} 로그 세션 시작"),
-            showSpwnPartSelector = false,
-            spwnPartOptions = emptyList(),
-            selectedSpwnPartStreamKey = null,
-            selectedSpwnPartLabel = null
-        )
+            logs = listOf("${serviceType.displayName} 로그 세션 시작")
+        ).clearSpwnSelection()
     }
 
     fun updateEmail(value: String) {
@@ -238,12 +234,8 @@ class AppController {
                 field = HangulRejectedField.URL,
                 original = value,
                 sanitized = sanitized
-            ),
-            showSpwnPartSelector = false,
-            spwnPartOptions = emptyList(),
-            selectedSpwnPartStreamKey = null,
-            selectedSpwnPartLabel = null
-        )
+            )
+        ).clearSpwnSelection()
     }
 
     fun updateOutputDir(value: String) {

@@ -72,3 +72,10 @@ data class AppUiState(
     val releaseNoteToShow: ReleaseNoteEntry? = null,
     val releaseNotesDialogMode: ReleaseNotesDialogMode = ReleaseNotesDialogMode.RECENT
 )
+
+fun AppUiState.clearSpwnSelection(): AppUiState = copy(
+    showSpwnPartSelector = false,
+    spwnPartOptions = emptyList(),
+    selectedSpwnPartStreamKey = null,
+    selectedSpwnPartLabel = null
+)

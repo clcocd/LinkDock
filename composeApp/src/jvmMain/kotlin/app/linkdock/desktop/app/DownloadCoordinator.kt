@@ -129,12 +129,8 @@ class DownloadCoordinator(
                 current.copy(
                     isPreparingDownload = true,
                     statusMessage = "다운로드 가능한 항목을 확인하는 중...",
-                    showSpwnPartSelector = false,
-                    spwnPartOptions = emptyList(),
-                    selectedSpwnPartStreamKey = null,
-                    selectedSpwnPartLabel = null,
                     downloadProgress = null
-                )
+                ).clearSpwnSelection()
             }
 
             try {
@@ -203,12 +199,8 @@ class DownloadCoordinator(
 
                 updateState { current ->
                     current.copy(
-                        isPreparingDownload = false,
-                        showSpwnPartSelector = false,
-                        spwnPartOptions = emptyList(),
-                        selectedSpwnPartStreamKey = null,
-                        selectedSpwnPartLabel = null
-                    )
+                        isPreparingDownload = false
+                    ).clearSpwnSelection()
                 }
 
                 startActualDownload(getState(), streamSelectionOverride = null)
