@@ -264,8 +264,18 @@ class AppController {
     }
 
     fun selectSpwnPart(option: SpwnPartOption) {
-        _uiState.update { current ->
-            current.copy(
+        val current = _uiState.value
+
+        if (isInputLocked(current) || current.isRefreshingEnvironment) {
+            return
+        }
+
+        if (option !in current.spwnPartOptions) {
+            return
+        }
+
+        _uiState.update { state ->
+            state.copy(
                 selectedSpwnPartStreamKey = option.bestStreamKey,
                 selectedSpwnPartLabel = option.displayLabel
             )
