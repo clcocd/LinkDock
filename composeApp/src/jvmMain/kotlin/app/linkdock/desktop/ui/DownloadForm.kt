@@ -37,11 +37,8 @@ fun DownloadForm(
     uiState: AppUiState,
     modifier: Modifier = Modifier
 ) {
-    val isEditLocked =
-        uiState.isPreparingDownload || uiState.isDownloading || uiState.isInstalling || uiState.isCheckingEnvironment
-
-    val isActionLocked =
-        isEditLocked || uiState.isRefreshingEnvironment
+    val isEditLocked = uiState.isInputLocked
+    val isActionLocked = uiState.isActionLocked
 
     val canEditFields = !isEditLocked
 

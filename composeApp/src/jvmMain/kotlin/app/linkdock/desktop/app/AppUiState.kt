@@ -79,3 +79,9 @@ fun AppUiState.clearSpwnSelection(): AppUiState = copy(
     selectedSpwnPartStreamKey = null,
     selectedSpwnPartLabel = null
 )
+
+val AppUiState.isInputLocked: Boolean
+    get() = isPreparingDownload || isDownloading || isInstalling || isCheckingEnvironment
+
+val AppUiState.isActionLocked: Boolean
+    get() = isInputLocked || isRefreshingEnvironment

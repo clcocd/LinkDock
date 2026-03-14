@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.linkdock.desktop.app.AppUiState
 import app.linkdock.desktop.app.EnvironmentSource
+import app.linkdock.desktop.app.isInputLocked
 import app.linkdock.desktop.domain.OsType
 
 @Composable
@@ -44,11 +45,7 @@ fun LogPanel(
     val listState = rememberLazyListState()
     val environmentSummary = buildEnvironmentSummary(uiState)
     val executionSummary = buildExecutionSummary(uiState)
-    val isTaskRunning =
-        uiState.isPreparingDownload ||
-                uiState.isDownloading ||
-                uiState.isInstalling ||
-                uiState.isCheckingEnvironment
+    val isTaskRunning = uiState.isInputLocked
 
     val installButtonText = when {
         uiState.isInstalling -> "진행 중"

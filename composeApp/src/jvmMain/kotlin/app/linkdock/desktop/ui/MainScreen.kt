@@ -1,22 +1,19 @@
 package app.linkdock.desktop.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
-import app.linkdock.desktop.release.AppReleaseNotes
-import app.linkdock.desktop.release.ReleaseNoteEntry
 import app.linkdock.desktop.app.AppController
 import app.linkdock.desktop.app.AppInfo
 import app.linkdock.desktop.app.ReleaseNotesDialogMode
+import app.linkdock.desktop.app.isActionLocked
+import app.linkdock.desktop.release.AppReleaseNotes
+import app.linkdock.desktop.release.ReleaseNoteEntry
 
 private val ContentMaxWidth = 1320.dp
 private val HeaderPanelMinHeight = 120.dp
@@ -29,16 +26,7 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by controller.uiState.collectAsState()
-
-    val isEditLocked =
-        uiState.isPreparingDownload ||
-                uiState.isDownloading ||
-                uiState.isInstalling ||
-                uiState.isCheckingEnvironment
-
-    val isActionLocked =
-        isEditLocked || uiState.isRefreshingEnvironment
-
+    val isActionLocked = uiState.isActionLocked
     val canRunEnvironmentCheck = !isActionLocked
     val canInstallOrUpdate = !isActionLocked
 

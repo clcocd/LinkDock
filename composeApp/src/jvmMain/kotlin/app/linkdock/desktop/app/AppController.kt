@@ -115,7 +115,7 @@ class AppController {
     }
 
     private fun isInputLocked(state: AppUiState = _uiState.value): Boolean {
-        return state.isPreparingDownload || state.isDownloading || state.isInstalling || state.isCheckingEnvironment
+        return state.isInputLocked
     }
 
     private fun removeHangul(value: String): String {
