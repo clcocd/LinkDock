@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10.5",
+            title = "설치 및 실행 확인을 포함한 전체 안내 문구를 더 자연스럽게 다듬었습니다.",
+            items = listOf(
+                "상단 안내 영역 제목과 상태 문구를 사용자 기준에 맞게 더 이해하기 쉽게 정리했습니다.",
+                "버튼과 안내 메시지의 표현을 맞춰 전체 흐름이 더 자연스럽게 이어지도록 개선했습니다.",
+                "설치와 실행 확인 과정에서 필요한 다음 행동을 더 쉽게 파악할 수 있도록 문구를 다듬었습니다"
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.10.4",
             title = "VOD 선택 드롭다운의 사용성을 더 자연스럽게 다듬었습니다.",
             items = listOf(
@@ -69,6 +78,7 @@ object AppReleaseNotes {
             )
         ),
         ReleaseNoteEntry(
+
             version = "1.8.7",
             title = "입력 오류 표시와 상태 안내를 더 정확하게 다듬었습니다.",
             items = listOf(
