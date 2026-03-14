@@ -84,7 +84,7 @@ fun LogPanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "환경 및 실행 상태",
+                        text = "설치 및 실행 확인",
                         style = MaterialTheme.typography.titleMedium
                     )
 
@@ -115,7 +115,7 @@ fun LogPanel(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "환경 상태",
+                        text = "설치 상태",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -193,13 +193,13 @@ fun LogPanel(
 
 private fun buildEnvironmentSummary(uiState: AppUiState): String = when {
     uiState.environmentSource == EnvironmentSource.CACHED && uiState.isRefreshingEnvironment ->
-        "저장된 환경 정보를 표시 중이며, 백그라운드에서 현재 상태를 다시 확인하고 있습니다."
+        "저장된 설치 상태를 표시 중이며, 백그라운드에서 현재 상태를 다시 확인하고 있습니다."
 
     uiState.environmentSource == EnvironmentSource.CACHED ->
-        "저장된 환경 정보를 표시 중입니다. 설치 확인으로 현재 상태를 다시 확인할 수 있습니다."
+        "저장된 설치 상태를 표시 중입니다. 설치 확인으로 현재 상태를 다시 확인할 수 있습니다."
 
     uiState.environmentSource != EnvironmentSource.VERIFIED ->
-        "아직 확인된 환경 정보가 없습니다. 설치 확인으로 현재 상태를 다시 확인하세요."
+        "아직 확인된 설치 상태가 없습니다. 설치 확인으로 현재 상태를 다시 확인하세요."
 
     uiState.osType == null ->
         "운영체제 정보를 확인하지 못했습니다."

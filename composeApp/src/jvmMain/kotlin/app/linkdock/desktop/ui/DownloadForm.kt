@@ -492,10 +492,10 @@ private fun buildActionHint(uiState: AppUiState): String? {
             "설치 상태 확인 중입니다. 완료될 때까지 기다려 주세요."
 
         uiState.isRefreshingEnvironment && uiState.environmentSource == EnvironmentSource.CACHED ->
-            "저장된 환경 정보를 표시 중입니다. 백그라운드에서 현재 상태를 다시 확인하고 있으니 잠시만 기다려 주세요."
+            "저장된 설치 상태를 표시 중입니다. 백그라운드에서 현재 상태를 다시 확인하고 있으니 잠시만 기다려 주세요."
 
         uiState.isRefreshingEnvironment ->
-            "앱 시작 후 환경 정보를 확인 중입니다. 잠시 후 다시 시도해 주세요."
+            "앱 시작 후 설치 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요."
 
         uiState.showSpwnPartSelector ->
             "받을 항목을 선택한 뒤 다운로드 버튼을 한 번 더 눌러 주세요."
@@ -510,19 +510,19 @@ private fun buildActionHint(uiState: AppUiState): String? {
             "설치/업데이트 진행 중입니다. 완료될 때까지 기다려 주세요."
 
         uiState.environmentSource != EnvironmentSource.VERIFIED ->
-            "다운로드 전에 위의 '환경 및 실행 상태' 영역에서 설치 확인을 먼저 실행해 주세요."
+            "다운로드 전에 위의 '설치 및 실행 확인' 영역에서 설치 확인을 먼저 실행해 주세요."
 
         uiState.selectedService == null ->
             "먼저 서비스를 선택하세요."
 
         !uiState.hasStreamlink && !uiState.hasFfmpeg ->
-            "Streamlink와 FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 진행 버튼을 눌러 주세요."
+            "Streamlink와 FFmpeg가 없습니다. 위의 '설치 및 실행 확인' 영역에서 설치 진행 버튼을 눌러 주세요."
 
         !uiState.hasStreamlink ->
-            "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 Streamlink 설치 버튼을 눌러 주세요."
+            "Streamlink가 없습니다. 위의 '설치 및 실행 확인' 영역에서 Streamlink 설치 버튼을 눌러 주세요."
 
         !uiState.hasFfmpeg ->
-            "FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 FFmpeg 설치 버튼을 눌러 주세요."
+            "FFmpeg가 없습니다. 위의 '설치 및 실행 확인' 영역에서 FFmpeg 설치 버튼을 눌러 주세요."
 
         uiState.email.isBlank() ->
             "이메일을 입력하세요."

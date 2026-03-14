@@ -200,7 +200,7 @@ class EnvironmentCheckCoordinator(
 
                         PostInstallState.NEEDS_RECHECK -> {
                             appendLog("설치 후에도 아직 Streamlink 또는 FFmpeg가 감지되지 않았습니다.")
-                            appendLog("잠시 후 다시 설치 확인을 다시 실행해 주세요.")
+                            appendLog("잠시 후 설치 확인을 다시 실행해 주세요.")
                             setStatus("설치 후 다시 확인 필요")
                         }
 

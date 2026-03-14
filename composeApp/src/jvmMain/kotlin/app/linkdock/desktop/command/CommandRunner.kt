@@ -199,12 +199,12 @@ class CommandRunner {
         if (trimmed.isBlank()) return null
 
         if (isSpinnerLine(trimmed)) {
-            return "설치 진행 중..."
+            return "설치/업데이트 진행 중..."
         }
 
         val percentMatch = Regex("""(\d+%)""").find(trimmed)
         if (percentMatch != null) {
-            return "설치 진행 중... ${percentMatch.value}"
+            return "설치/업데이트 진행 중... ${percentMatch.value}"
         }
 
         val sizeMatch = Regex(
@@ -212,7 +212,7 @@ class CommandRunner {
             RegexOption.IGNORE_CASE
         ).find(trimmed)
         if (sizeMatch != null) {
-            return "설치 진행 중... ${sizeMatch.value}"
+            return "설치/업데이트 진행 중... ${sizeMatch.value}"
         }
 
         val barCharCount = trimmed.count {
@@ -221,7 +221,7 @@ class CommandRunner {
         }
 
         if (barCharCount >= 5) {
-            return "설치 진행 중..."
+            return "설치/업데이트 진행 중..."
         }
 
         return null

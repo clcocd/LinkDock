@@ -40,7 +40,7 @@ object AppReleaseNotes {
             items = listOf(
                 "업데이트가 필요 없는 경우에도 실패로 보이던 문제를 수정했습니다.",
                 "Streamlink가 이미 최신 상태일 때 상태 안내가 실제 상황에 맞게 표시되도록 보완했습니다.",
-                "환경 및 실행 상태 문구가 더 자연스럽게 이어지도록 정리했습니다."
+                "설치 및 실행 확인 문구가 더 자연스럽게 이어지도록 정리했습니다."
             )
         ),
         ReleaseNoteEntry(
@@ -74,7 +74,7 @@ object AppReleaseNotes {
             items = listOf(
                 "URL 입력 오류가 다른 입력칸에 잘못 표시되지 않도록 정리했습니다.",
                 "다운로드를 시작할 수 없는 경우 필요한 다음 행동을 더 알기 쉽게 안내합니다.",
-                "환경 상태 요약에서 Streamlink와 FFmpeg 상태를 더 정확하게 확인할 수 있습니다."
+                "설치 상태 요약에서 Streamlink와 FFmpeg 상태를 더 정확하게 확인할 수 있습니다."
             )
         ),
         ReleaseNoteEntry(

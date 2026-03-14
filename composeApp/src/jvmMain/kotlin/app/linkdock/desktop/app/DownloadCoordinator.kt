@@ -40,7 +40,7 @@ class DownloadCoordinator(
         if (!isEnvironmentVerified(state)) {
             startNewLogSession("다운로드 시작 실패")
             appendLog("설치 확인이 아직 끝나지 않았습니다.")
-            appendLog("잠시 후 다시 시도하거나 설치 확인을 눌러주세요.")
+            appendLog("잠시 후 다시 시도하거나 설치 확인을 시도해 주세요.")
             updateState { current ->
                 current.copy(statusMessage = "설치 확인 필요")
             }
