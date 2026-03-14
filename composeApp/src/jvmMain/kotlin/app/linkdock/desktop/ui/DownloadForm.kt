@@ -266,7 +266,10 @@ private fun InputCard(
                 effectiveShowSpwnPartSelector &&
                         effectiveSpwnPartOptions.isNotEmpty() &&
                         !uiState.isPreparingDownload &&
-                        !uiState.isDownloading
+                        !uiState.isDownloading &&
+                        !uiState.isInstalling &&
+                        !uiState.isCheckingEnvironment &&
+                        !uiState.isRefreshingEnvironment
 
             val density = LocalDensity.current
             var spwnSelectorWidthPx by remember { mutableIntStateOf(0) }
@@ -512,11 +515,14 @@ private fun buildActionHint(uiState: AppUiState): String? {
         uiState.selectedService == null ->
             "먼저 서비스를 선택하세요."
 
+        !uiState.hasStreamlink && !uiState.hasFfmpeg ->
+            "Streamlink와 FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 진행 버튼을 눌러 주세요."
+
         !uiState.hasStreamlink ->
-            "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
+            "Streamlink가 없습니다. 위의 '환경 및 실행 상태' 영역에서 Streamlink 설치 버튼을 눌러 주세요."
 
         !uiState.hasFfmpeg ->
-            "FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 설치 버튼을 눌러 주세요."
+            "FFmpeg가 없습니다. 위의 '환경 및 실행 상태' 영역에서 FFmpeg 설치 버튼을 눌러 주세요."
 
         uiState.email.isBlank() ->
             "이메일을 입력하세요."

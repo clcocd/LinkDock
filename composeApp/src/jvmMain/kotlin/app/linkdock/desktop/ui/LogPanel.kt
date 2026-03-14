@@ -50,8 +50,10 @@ fun LogPanel(
     val installButtonText = when {
         uiState.isInstalling -> "진행 중"
         uiState.environmentSource != EnvironmentSource.VERIFIED -> "설치/업데이트"
-        uiState.hasStreamlink -> "업데이트"
-        else -> "설치"
+        !uiState.hasStreamlink && !uiState.hasFfmpeg -> "설치 진행"
+        !uiState.hasStreamlink -> "Streamlink 설치"
+        !uiState.hasFfmpeg -> "FFmpeg 설치"
+        else -> "업데이트"
     }
 
     LaunchedEffect(uiState.logs.size) {
