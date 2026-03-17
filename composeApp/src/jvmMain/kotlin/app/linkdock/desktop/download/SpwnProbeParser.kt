@@ -4,7 +4,8 @@ import java.util.Locale
 
 data class SpwnProbeResult(
     val isMultiPart: Boolean,
-    val options: List<SpwnPartOption>
+    val options: List<SpwnPartOption>,
+    val isParseFailure: Boolean = false
 )
 
 data class SpwnPartOption(
@@ -27,13 +28,8 @@ object SpwnProbeParser {
     fun parse(lines: List<String>): SpwnProbeResult {
         val streamKeys = parseAvailableStreamKeys(lines)
         val grouped = groupByPart(streamKeys)
-
-        if (grouped.isEmpty()) {
-            return SpwnProbeResult(
-                isMultiPart = false,
-                options = emptyList()
-            )
-        }
+        val hasAvailableStreams = lines.any { it.contains("Available streams:") }
+        val hasMultiPartHint = lines.any { it.contains("Multi-part event:") }
 
         val rawLabelMap = parseRawLabelMap(lines)
 
@@ -51,9 +47,32 @@ object SpwnProbeParser {
             )
         }
 
+        if (hasMultiPartHint && grouped.size >= 2 && options.isNotEmpty()) {
+            return SpwnProbeResult(
+                isMultiPart = true,
+                options = sortOptions(options),
+                isParseFailure = false
+            )
+        }
+
+        val isConfirmedSingle =
+            hasAvailableStreams &&
+                    streamKeys.isNotEmpty() &&
+                    !hasMultiPartHint &&
+                    grouped.isEmpty()
+
+        if (isConfirmedSingle) {
+            return SpwnProbeResult(
+                isMultiPart = false,
+                options = emptyList(),
+                isParseFailure = false
+            )
+        }
+
         return SpwnProbeResult(
-            isMultiPart = grouped.keys.size >= 2,
-            options = sortOptions(options)
+            isMultiPart = false,
+            options = emptyList(),
+            isParseFailure = true
         )
     }
 
@@ -94,7 +113,6 @@ object SpwnProbeParser {
             .map { it.trim() }
             .map { it.substringBefore(" (").trim() }
             .filter { it.isNotBlank() }
-            .filter { partStreamRegex.matches(it) }
     }
 
     private fun groupByPart(streamKeys: List<String>): LinkedHashMap<String, List<String>> {

@@ -170,6 +170,13 @@ class DownloadCoordinator(
                     return@launch
                 }
 
+                val explicitFailureMessage = findSpwnProbeFailureMessage(probeLines)
+                if (explicitFailureMessage != null) {
+                    setStatus("다운로드 항목 확인 실패")
+                    appendLog(explicitFailureMessage)
+                    return@launch
+                }
+
                 if (!result.success && probeLines.none { it.contains("Available streams:") }) {
                     setStatus("다운로드 항목 확인 실패")
                     appendLog("다운로드 가능한 항목을 확인하지 못했습니다.")
@@ -177,6 +184,13 @@ class DownloadCoordinator(
                 }
 
                 val probeResult = SpwnProbeParser.parse(probeLines)
+
+                if (probeResult.isParseFailure) {
+                    setStatus("다운로드 항목 확인 실패")
+                    appendLog("다운로드 항목 구조를 판별하지 못했습니다.")
+                    appendLog("다운로드 항목을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.")
+                    return@launch
+                }
 
                 if (probeResult.isMultiPart && probeResult.options.isNotEmpty()) {
                     val firstOption = probeResult.options.first()
@@ -228,9 +242,33 @@ class DownloadCoordinator(
         }
     }
 
+
+
+    private fun findSpwnProbeFailureMessage(lines: List<String>): String? {
+        return when {
+            lines.any { it.contains("SPWN login failed", ignoreCase = true) } ->
+                "SPWN 로그인에 실패했습니다. 이메일 또는 비밀번호를 확인해 주세요."
+
+            lines.any { it.contains("You do not have a ticket for this event", ignoreCase = true) } ->
+                "현재 계정으로는 이 이벤트에 접근할 수 없습니다."
+
+            lines.any { it.contains("Error fetching stream info from SPWN API", ignoreCase = true) } ->
+                "SPWN에서 스트림 정보를 가져오지 못했습니다."
+
+            lines.any { it.contains("No available stream for this event", ignoreCase = true) } ->
+                "현재 이벤트에서 사용 가능한 스트림을 찾지 못했습니다."
+
+            else -> null
+        }
+    }
+
     private fun shouldExposeProbeLine(line: String): Boolean {
         return line.contains("Multi-part event:") ||
                 line.contains("Available streams:") ||
+                line.contains("SPWN login failed", ignoreCase = true) ||
+                line.contains("You do not have a ticket for this event", ignoreCase = true) ||
+                line.contains("Error fetching stream info from SPWN API", ignoreCase = true) ||
+                line.contains("No available stream for this event", ignoreCase = true) ||
                 line.contains("error", ignoreCase = true)
     }
 
