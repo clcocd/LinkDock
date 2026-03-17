@@ -22,11 +22,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import app.linkdock.desktop.app.*
 import app.linkdock.desktop.domain.ServiceType
-import app.linkdock.desktop.download.SpwnPartOption
 import app.linkdock.desktop.download.getServiceUrlHintMessage
 import app.linkdock.desktop.download.getServiceUrlPlaceholder
 import app.linkdock.desktop.download.getUnsupportedServiceUrlMessage
@@ -95,36 +95,7 @@ private fun InputCard(
 
     val inputHintMessage = getServiceUrlHintMessage(uiState.selectedService, uiState.url)
 
-    val debugUseFakeSpwnOptions = false
-
-    val debugSpwnPartOptions = if (debugUseFakeSpwnOptions) {
-        listOf(
-            SpwnPartOption(
-                displayLabel = "Stage 1",
-                bestStreamKey = "part3_1080p",
-                partKey = "part3",
-                rawLabel = "rgrp5/stage1_v1 [VOD]",
-                originalOrder = 0
-            ),
-            SpwnPartOption(
-                displayLabel = "Stage 2",
-                bestStreamKey = "part4_1080p",
-                partKey = "part4",
-                rawLabel = "rgrp5/stage2_v1 [VOD]",
-                originalOrder = 1
-            )
-        )
-    } else {
-        emptyList()
-    }
-
-    val effectiveSpwnPartOptions =
-        uiState.spwnPartOptions.ifEmpty {
-            debugSpwnPartOptions
-        }
-
-    val effectiveShowSpwnPartSelector =
-        uiState.showSpwnPartSelector || effectiveSpwnPartOptions.isNotEmpty()
+    val spwnPartOptions = uiState.spwnPartOptions
 
     val urlIsError = urlHangulRejected || unsupportedUrlMessage != null
 
@@ -249,19 +220,39 @@ private fun InputCard(
             )
 
             var expanded by remember(
-                effectiveSpwnPartOptions,
+                spwnPartOptions,
                 uiState.selectedSpwnPartStreamKey
             ) {
                 mutableStateOf(false)
             }
 
-            val selectedOption = effectiveSpwnPartOptions.firstOrNull {
+            val selectedOption = spwnPartOptions.firstOrNull {
                 it.bestStreamKey == uiState.selectedSpwnPartStreamKey
-            } ?: effectiveSpwnPartOptions.firstOrNull()
+            }
+
+            val hasSpwnPartOptions = spwnPartOptions.isNotEmpty()
+
+            val hasSelectedSpwnPart = selectedOption != null
+
+            val showSpwnPartPlaceholder =
+                hasSpwnPartOptions && !hasSelectedSpwnPart
+
+            val spwnPartFieldText = when {
+                hasSelectedSpwnPart -> selectedOption.displayLabel
+                showSpwnPartPlaceholder -> " "
+                else -> ""
+            }
+
+            val spwnPartFieldTextStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = when {
+                    hasSelectedSpwnPart -> MaterialTheme.colorScheme.onSurface
+                    showSpwnPartPlaceholder -> Color.Transparent
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
+            )
 
             val canSelectSpwnPart =
-                effectiveShowSpwnPartSelector &&
-                        effectiveSpwnPartOptions.isNotEmpty() &&
+                spwnPartOptions.isNotEmpty() &&
                         !uiState.isPreparingDownload &&
                         !uiState.isDownloading &&
                         !uiState.isInstalling &&
@@ -279,12 +270,13 @@ private fun InputCard(
                     }
             ) {
                 OutlinedTextField(
-                    value = selectedOption?.displayLabel ?: "",
+                    value = spwnPartFieldText,
                     onValueChange = {},
                     readOnly = true,
                     singleLine = true,
                     enabled = canSelectSpwnPart,
                     label = { Text("다운로드 VOD") },
+                    textStyle = spwnPartFieldTextStyle,
                     trailingIcon = {
                         Box(
                             modifier = Modifier
@@ -319,6 +311,17 @@ private fun InputCard(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (showSpwnPartPlaceholder) {
+                    Text(
+                        text = "받을 항목을 선택해 주세요",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 16.dp, end = 56.dp, top = 10.dp)
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -334,7 +337,7 @@ private fun InputCard(
                         with(density) { spwnSelectorWidthPx.toDp() }
                     )
                 ) {
-                    effectiveSpwnPartOptions.forEach { option ->
+                    spwnPartOptions.forEach { option ->
                         DropdownMenuItem(
                             text = {
                                 Text(
@@ -353,7 +356,7 @@ private fun InputCard(
             }
 
             Text(
-                text = if (effectiveSpwnPartOptions.isNotEmpty()) {
+                text = if (spwnPartOptions.isNotEmpty()) {
                     "받을 영상이 여러 개 있습니다. 원하는 항목을 선택해 주세요."
                 } else {
                     "받을 영상이 여러 개면 원하는 항목을 선택할 수 있습니다."

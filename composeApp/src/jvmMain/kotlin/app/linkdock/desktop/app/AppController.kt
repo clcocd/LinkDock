@@ -17,6 +17,25 @@ import kotlinx.coroutines.flow.update
 
 class AppController {
 
+    private val DEBUG_USE_FAKE_SPWN_SELECTION = false
+
+    private val DEBUG_FAKE_SPWN_PART_OPTIONS = listOf(
+        SpwnPartOption(
+            displayLabel = "Stage 1",
+            bestStreamKey = "part3_1080p",
+            partKey = "part3",
+            rawLabel = "rgrp5/stage1_v1 [VOD]",
+            originalOrder = 0
+        ),
+        SpwnPartOption(
+            displayLabel = "Stage 2",
+            bestStreamKey = "part4_1080p",
+            partKey = "part4",
+            rawLabel = "rgrp5/stage2_v1 [VOD]",
+            originalOrder = 1
+        )
+    )
+
     private val platformResolver = PlatformResolver()
 
     private val commandRunner = CommandRunner()
@@ -171,6 +190,18 @@ class AppController {
         }
     }
 
+    private fun AppUiState.applyDebugSpwnSelectionIfNeeded(): AppUiState {
+        if (!DEBUG_USE_FAKE_SPWN_SELECTION) return this
+        if (selectedService != ServiceType.SPWN) return this
+
+        return copy(
+            showSpwnPartSelector = true,
+            spwnPartOptions = DEBUG_FAKE_SPWN_PART_OPTIONS,
+            selectedSpwnPartStreamKey = null,
+            selectedSpwnPartLabel = null
+        )
+    }
+
     fun updateService(serviceType: ServiceType) {
         val current = _uiState.value
 
@@ -185,6 +216,7 @@ class AppController {
             selectedService = serviceType,
             logs = listOf("${serviceType.displayName} 로그 세션 시작")
         ).clearSpwnSelection()
+            .applyDebugSpwnSelectionIfNeeded()
     }
 
     fun updateEmail(value: String) {
@@ -236,6 +268,7 @@ class AppController {
                 sanitized = sanitized
             )
         ).clearSpwnSelection()
+            .applyDebugSpwnSelectionIfNeeded()
     }
 
     fun updateOutputDir(value: String) {

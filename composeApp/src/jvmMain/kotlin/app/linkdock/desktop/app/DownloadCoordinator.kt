@@ -7,6 +7,7 @@ import app.linkdock.desktop.download.DownloadProgressInfo
 import app.linkdock.desktop.download.SpwnProbeParser
 import app.linkdock.desktop.download.StreamlinkProgressParser
 import app.linkdock.desktop.platform.PlatformResolver
+import app.linkdock.desktop.download.SpwnPartOption
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -108,16 +109,49 @@ class DownloadCoordinator(
             return
         }
 
+        if (shouldWaitForSpwnSelection(state)) {
+            startNewLogSession("다운로드 시작 보류")
+            appendLog("받을 항목을 먼저 선택해 주세요.")
+            updateState { current ->
+                current.copy(statusMessage = "다운로드할 VOD 선택 필요")
+            }
+            return
+        }
+
         val finalStreamSelection = state.selectedSpwnPartStreamKey
         startActualDownload(state, finalStreamSelection)
     }
 
     private fun shouldRunSpwnProbe(state: AppUiState): Boolean {
         return state.selectedService == ServiceType.SPWN &&
+                !state.showSpwnPartSelector &&
                 state.selectedSpwnPartStreamKey == null
     }
 
+    private fun shouldWaitForSpwnSelection(state: AppUiState): Boolean {
+        return state.selectedService == ServiceType.SPWN &&
+                state.showSpwnPartSelector &&
+                state.spwnPartOptions.isNotEmpty() &&
+                state.selectedSpwnPartStreamKey == null
+    }
+
+    private fun applySpwnMultiPartSelection(options: List<SpwnPartOption>) {
+        updateState { current ->
+            current.copy(
+                isPreparingDownload = false,
+                showSpwnPartSelector = true,
+                spwnPartOptions = options,
+                selectedSpwnPartStreamKey = null,
+                selectedSpwnPartLabel = null,
+                statusMessage = "다운로드할 VOD를 선택해 주세요."
+            )
+        }
+
+        appendLog("받을 영상이 여러 개 있습니다. 원하는 항목을 선택해 주세요.")
+    }
+
     private fun runSpwnProbe(state: AppUiState) {
+
         scope.launch {
             downloadStopRequested = false
             currentDownloadProcess = null
@@ -193,21 +227,7 @@ class DownloadCoordinator(
                 }
 
                 if (probeResult.isMultiPart && probeResult.options.isNotEmpty()) {
-                    val firstOption = probeResult.options.first()
-
-                    updateState { current ->
-                        current.copy(
-                            isPreparingDownload = false,
-                            showSpwnPartSelector = true,
-                            spwnPartOptions = probeResult.options,
-                            selectedSpwnPartStreamKey = firstOption.bestStreamKey,
-                            selectedSpwnPartLabel = firstOption.displayLabel,
-                            statusMessage = "다운로드할 VOD를 선택해 주세요."
-                        )
-                    }
-
-                    appendLog("여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요.")
-                    appendLog("기본 선택: ${firstOption.displayLabel}")
+                    applySpwnMultiPartSelection(probeResult.options)
                     return@launch
                 }
 
