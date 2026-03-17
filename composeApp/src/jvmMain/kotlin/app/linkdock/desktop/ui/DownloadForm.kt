@@ -354,9 +354,9 @@ private fun InputCard(
 
             Text(
                 text = if (effectiveSpwnPartOptions.isNotEmpty()) {
-                    "여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요."
+                    "받을 영상이 여러 개 있습니다. 원하는 항목을 선택해 주세요."
                 } else {
-                    "여러 항목이 있을 경우 다운로드할 항목을 선택할 수 있습니다."
+                    "받을 영상이 여러 개면 원하는 항목을 선택할 수 있습니다."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
