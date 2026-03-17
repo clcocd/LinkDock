@@ -114,6 +114,7 @@ class DownloadCoordinator(
 
     private fun shouldRunSpwnProbe(state: AppUiState): Boolean {
         return state.selectedService == ServiceType.SPWN &&
+                !state.showSpwnPartSelector &&
                 state.selectedSpwnPartStreamKey == null
     }
 
@@ -193,21 +194,18 @@ class DownloadCoordinator(
                 }
 
                 if (probeResult.isMultiPart && probeResult.options.isNotEmpty()) {
-                    val firstOption = probeResult.options.first()
-
                     updateState { current ->
                         current.copy(
                             isPreparingDownload = false,
                             showSpwnPartSelector = true,
                             spwnPartOptions = probeResult.options,
-                            selectedSpwnPartStreamKey = firstOption.bestStreamKey,
-                            selectedSpwnPartLabel = firstOption.displayLabel,
+                            selectedSpwnPartStreamKey = null,
+                            selectedSpwnPartLabel = null,
                             statusMessage = "다운로드할 VOD를 선택해 주세요."
                         )
                     }
 
-                    appendLog("여러 VOD가 감지되었습니다. 받을 항목을 선택해 주세요.")
-                    appendLog("기본 선택: ${firstOption.displayLabel}")
+                    appendLog("받을 영상이 여러 개 있습니다. 원하는 항목을 선택해 주세요.")
                     return@launch
                 }
 
