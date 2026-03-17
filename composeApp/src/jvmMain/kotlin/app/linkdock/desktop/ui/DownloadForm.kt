@@ -257,7 +257,7 @@ private fun InputCard(
 
             val selectedOption = effectiveSpwnPartOptions.firstOrNull {
                 it.bestStreamKey == uiState.selectedSpwnPartStreamKey
-            }
+            } ?: effectiveSpwnPartOptions.firstOrNull()
 
             val canSelectSpwnPart =
                 effectiveShowSpwnPartSelector &&
@@ -285,9 +285,6 @@ private fun InputCard(
                     singleLine = true,
                     enabled = canSelectSpwnPart,
                     label = { Text("다운로드 VOD") },
-                    placeholder = {
-                        Text("받을 항목을 선택해 주세요")
-                    },
                     trailingIcon = {
                         Box(
                             modifier = Modifier
@@ -497,11 +494,8 @@ private fun buildActionHint(uiState: AppUiState): String? {
         uiState.isRefreshingEnvironment ->
             "앱 시작 후 설치 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요."
 
-        uiState.showSpwnPartSelector && uiState.selectedSpwnPartStreamKey == null ->
-            "받을 항목을 먼저 선택해 주세요."
-
         uiState.showSpwnPartSelector ->
-            "받을 항목을 선택한 뒤 다운로드 버튼을 눌러 주세요."
+            "받을 항목을 선택한 뒤 다운로드 버튼을 한 번 더 눌러 주세요."
 
         uiState.isPreparingDownload ->
             "다운로드할 항목을 확인하고 있습니다. 잠시만 기다려 주세요."
