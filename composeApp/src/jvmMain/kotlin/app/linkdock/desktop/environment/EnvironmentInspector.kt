@@ -30,13 +30,30 @@ class EnvironmentInspector(
     }
 
     private fun inspectMac(logs: MutableList<String>): EnvironmentInspectionResult {
+        val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
+
         val streamlinkPath = platformResolver.findCommandPath(OsType.MAC, "streamlink")
         val streamlink = commandRunner.runCommandWithFallback(
             "streamlink",
             streamlinkPath,
             "--version"
         )
-        appendToolStatus(logs, "Streamlink", streamlink.success, streamlink.firstLine)
+
+        val streamlinkBrewPackageVersion = resolveBrewPackageVersion(
+            brewExecutablePath = brewPath,
+            packageName = "streamlink"
+        )
+
+        appendToolStatus(
+            logs = logs,
+            label = "Streamlink",
+            success = streamlink.success,
+            firstLine = streamlink.firstLine,
+            formattedInstalledLine = formatMacStreamlinkDisplayLine(
+                streamlinkVersionLine = streamlink.firstLine,
+                brewPackageVersion = streamlinkBrewPackageVersion
+            )
+        )
 
         val ffmpegPath = platformResolver.findCommandPath(OsType.MAC, "ffmpeg")
         val ffmpeg = commandRunner.runCommandWithFallback(
@@ -46,7 +63,6 @@ class EnvironmentInspector(
         )
         appendToolStatus(logs, "FFmpeg", ffmpeg.success, ffmpeg.firstLine)
 
-        val brewPath = platformResolver.findCommandPath(OsType.MAC, "brew")
         val brew = commandRunner.runCommandWithFallback(
             "brew",
             brewPath,
@@ -89,13 +105,53 @@ class EnvironmentInspector(
         logs: MutableList<String>,
         label: String,
         success: Boolean,
-        firstLine: String?
+        firstLine: String?,
+        formattedInstalledLine: String? = null
     ) {
         logs += if (success) {
-            formatInstalledToolLine(label, firstLine)
+            formattedInstalledLine ?: formatInstalledToolLine(label, firstLine)
         } else {
             "$label 없음"
         }
+    }
+
+    private fun resolveBrewPackageVersion(
+        brewExecutablePath: String?,
+        packageName: String
+    ): String? {
+        val result = commandRunner.runCommandWithFallback(
+            "brew",
+            brewExecutablePath,
+            "list",
+            "--versions",
+            packageName
+        )
+
+        if (!result.success) return null
+
+        val line = result.firstLine?.trim().orEmpty()
+        if (line.isBlank()) return null
+
+        val tokens = line.split(Regex("""\s+"""))
+        if (tokens.isEmpty()) return null
+        if (!tokens.first().equals(packageName, ignoreCase = true)) return null
+
+        return tokens.drop(1).firstOrNull()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun formatMacStreamlinkDisplayLine(
+        streamlinkVersionLine: String?,
+        brewPackageVersion: String?
+    ): String? {
+        val runtimeVersion = extractRuntimeVersion(
+            label = "streamlink",
+            line = streamlinkVersionLine
+        ) ?: return null
+
+        val brewVersion = brewPackageVersion?.trim().orEmpty()
+        if (brewVersion.isBlank()) return "Streamlink $runtimeVersion"
+
+        return "Streamlink 실행 버전: $runtimeVersion (Homebrew 패키지: $brewVersion)"
     }
 
     private fun formatInstalledToolLine(label: String, raw: String?): String {
@@ -148,6 +204,27 @@ class EnvironmentInspector(
 
         val firstToken = remainder.substringBefore(" ").trim()
         return firstToken.takeIf { it.isNotBlank() }?.take(32)
+    }
+
+    private fun extractRuntimeVersion(
+        label: String,
+        line: String?
+    ): String? {
+        val normalized = line?.trim().orEmpty()
+        if (normalized.isBlank()) return null
+
+        val regex = Regex("""(?i)\b${Regex.escape(label)}\s+([0-9A-Za-z._-]+)""")
+        val matched = regex.find(normalized)?.groupValues?.getOrNull(1)?.trim()
+        if (!matched.isNullOrBlank()) return matched
+
+        if (!normalized.startsWith(label, ignoreCase = true)) return null
+        val fallback = normalized
+            .substring(label.length)
+            .trim()
+            .substringBefore(" ")
+            .trim()
+
+        return fallback.takeIf { it.isNotBlank() }?.take(32)
     }
 
     companion object {
