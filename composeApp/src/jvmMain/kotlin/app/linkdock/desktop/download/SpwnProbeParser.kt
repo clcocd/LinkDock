@@ -55,11 +55,20 @@ object SpwnProbeParser {
             )
         }
 
+        val hasSinglePartStyleStreams =
+            grouped.size == 1 && streamKeys.isNotEmpty()
+
         val isConfirmedSingle =
             hasAvailableStreams &&
                     streamKeys.isNotEmpty() &&
-                    !hasMultiPartHint &&
-                    grouped.isEmpty()
+                    (
+                        grouped.isEmpty() ||
+                                hasSinglePartStyleStreams
+                    ) &&
+                    (
+                        !hasMultiPartHint ||
+                                grouped.size <= 1
+                    )
 
         if (isConfirmedSingle) {
             return SpwnProbeResult(
