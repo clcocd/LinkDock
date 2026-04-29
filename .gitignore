@@ -20,3 +20,6 @@ node_modules/
 /conveyor.conf
 /composeApp/generated.conveyor.conf
 /output
+/AGENTS.md
+/AGENT_WORKLOG.md
+/docs/
