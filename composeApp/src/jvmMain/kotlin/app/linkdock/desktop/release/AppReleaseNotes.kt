@@ -9,6 +9,15 @@ data class ReleaseNoteEntry(
 object AppReleaseNotes {
     private val notes = listOf(
         ReleaseNoteEntry(
+            version = "1.10.10",
+            title = "다운로드 확인과 로그 확인이 더 편해졌습니다.",
+            items = listOf(
+                "다운로드 항목 확인 중 가끔 실패로 보이던 문제를 수정해, 다운로드가 더 자연스럽게 이어지도록 개선했습니다.",
+                "설치 확인 화면에서 Streamlink 버전 표시를 다듬어, 실제 실행 버전과 Homebrew 패키지 버전을 함께 보기 쉽게 정리했습니다.",
+                "로그 영역에 복사 버튼을 추가해, 필요한 로그를 바로 복사해 공유할 수 있도록 개선했습니다."
+            )
+        ),
+        ReleaseNoteEntry(
             version = "1.10.9",
             title = "받을 항목을 고르는 화면과 안내 표시를 더 자연스럽게 다듬었습니다.",
             items = listOf(
