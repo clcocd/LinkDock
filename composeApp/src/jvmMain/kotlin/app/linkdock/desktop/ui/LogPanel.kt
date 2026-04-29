@@ -10,11 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -24,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -43,6 +50,7 @@ fun LogPanel(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    val clipboardManager = LocalClipboardManager.current
     val environmentSummary = buildEnvironmentSummary(uiState)
     val executionSummary = buildExecutionSummary(uiState)
     val isTaskRunning = uiState.isInputLocked
@@ -167,10 +175,32 @@ fun LogPanel(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "로그",
-                    style = MaterialTheme.typography.titleSmall
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "로그",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
+                    IconButton(
+                        onClick = {
+                            clipboardManager.setText(
+                                AnnotatedString(uiState.logs.joinToString("\n"))
+                            )
+                        },
+                        enabled = uiState.logs.isNotEmpty(),
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ContentCopy,
+                            contentDescription = "로그 복사",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
